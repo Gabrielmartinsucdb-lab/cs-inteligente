@@ -1,0 +1,6 @@
+{
+  "/templates/page": "app/templates/page.js",
+  "/formatador/page": "app/formatador/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/aulas/page": "app/aulas/page.js"
+}
