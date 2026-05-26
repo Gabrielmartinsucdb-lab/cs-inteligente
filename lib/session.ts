@@ -1,44 +1,51 @@
-export type SessionUser = {
-  id: string;
-  name: string;
-  login: string;
-  is_admin: boolean;
-  can_create_templates: boolean;
-};
+import { NextResponse } from "next/server";
 
-export function getSessionUser():
-  | SessionUser
-  | null {
-  if (typeof document === "undefined") {
-    return null;
-  }
+export async function POST(request: Request) {
+  const body = await request.json();
 
-  const cookie =
-    document.cookie
-      .split("; ")
-      .find((row) =>
-        row.startsWith(
-          "cs_user_session="
-        )
-      );
+  const {
+    id,
+    name,
+    login,
+    is_admin,
+    can_create_templates
+  } = body;
 
-  if (!cookie) {
-    return null;
-  }
-
-  try {
-    const value =
-      decodeURIComponent(
-        cookie.split("=")[1]
-      );
-
-    return JSON.parse(value);
-  } catch (error) {
-    console.error(
-      "ERRO SESSION USER:",
-      error
+  if (!login) {
+    return NextResponse.json(
+      {
+        error: "Credenciais inválidas"
+      },
+      {
+        status: 401
+      }
     );
-
-    return null;
   }
+
+  const response = NextResponse.json({
+    ok: true
+  });
+
+  response.cookies.set(
+    "cs_user_session",
+    JSON.stringify({
+      id,
+      name,
+      login,
+      is_admin,
+      can_create_templates
+    }),
+    {
+      httpOnly: false,
+      sameSite: "lax",
+      secure:
+        process.env.NODE_ENV ===
+        "production",
+      path: "/",
+      maxAge:
+        60 * 60 * 24 * 7
+    }
+  );
+
+  return response;
 }
