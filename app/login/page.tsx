@@ -61,47 +61,10 @@ export default function LoginPage() {
         return;
       }
 
-      const response =
-        await fetch(
-          "/api/auth/local-user-login",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            credentials:
-              "include",
-
-            body: JSON.stringify({
-              id: user.id,
-
-              name:
-                user.name,
-
-              login:
-                user.login,
-
-              is_admin:
-                user.is_admin,
-
-              can_create_templates:
-                user.can_create_templates
-            })
-          }
-        );
-
-      if (!response.ok) {
-        setError(
-          "Erro ao criar sessão."
-        );
-
-        setLoading(false);
-
-        return;
-      }
+      localStorage.setItem(
+        "cs_session_user",
+        JSON.stringify(user)
+      );
 
       window.location.href =
         "/dashboard";
