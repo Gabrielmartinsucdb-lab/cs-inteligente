@@ -1,6 +1,0 @@
-{
-  "/api/auth/local-login/route": "app/api/auth/local-login/route.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/formatador/page": "app/formatador/page.js",
-  "/login/page": "app/login/page.js"
-}
