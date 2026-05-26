@@ -17,8 +17,6 @@ import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
 
-import { isLocalAdmin } from "@/lib/admin-auth";
-
 import { findUser } from "@/lib/users-store";
 
 export default function LoginPage() {
@@ -46,53 +44,6 @@ export default function LoginPage() {
     setError("");
 
     try {
-      console.log(
-        "TENTANDO LOGIN..."
-      );
-
-      if (
-        isLocalAdmin(
-          login,
-          password
-        )
-      ) {
-        console.log(
-          "ADMIN LOCAL ENCONTRADO"
-        );
-
-        const response =
-          await fetch(
-            "/api/auth/local-login",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body: JSON.stringify({
-                login,
-                password
-              })
-            }
-          );
-
-        if (response.ok) {
-          console.log(
-            "LOGIN ADMIN OK"
-          );
-
-          router.replace(
-            "/dashboard"
-          );
-
-          router.refresh();
-
-          return;
-        }
-      }
-
       console.log(
         "BUSCANDO USER NO SUPABASE..."
       );
