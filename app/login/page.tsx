@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 
-import { useRouter } from "next/navigation";
-
 import { Button } from "@/components/ui/button";
 
 import {
@@ -20,9 +18,6 @@ import { Label } from "@/components/ui/label";
 import { findUser } from "@/lib/users-store";
 
 export default function LoginPage() {
-  const router =
-    useRouter();
-
   const [login, setLogin] =
     useState("");
 
@@ -45,11 +40,20 @@ export default function LoginPage() {
     setError("");
 
     try {
+      console.log(
+        "INICIANDO LOGIN..."
+      );
+
       const user =
         await findUser(
           login,
           password
         );
+
+      console.log(
+        "RESULTADO LOGIN:",
+        user
+      );
 
       if (!user) {
         setError(
@@ -66,10 +70,20 @@ export default function LoginPage() {
         JSON.stringify(user)
       );
 
-      window.location.href =
-        "/dashboard";
+      console.log(
+        "LOGIN OK"
+      );
+
+      alert(
+        "LOGIN FUNCIONOU"
+      );
+
+      window.location.assign(
+        "/dashboard"
+      );
     } catch (error) {
       console.error(
+        "ERRO LOGIN:",
         error
       );
 
@@ -99,12 +113,11 @@ export default function LoginPage() {
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="login">
+              <Label>
                 Login
               </Label>
 
               <Input
-                id="login"
                 value={login}
                 onChange={(
                   event
@@ -119,12 +132,11 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">
+              <Label>
                 Senha
               </Label>
 
               <Input
-                id="password"
                 type="password"
                 value={password}
                 onChange={(
