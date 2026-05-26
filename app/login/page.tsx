@@ -1,22 +1,40 @@
 "use client";
 
 import { useState } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
+
 import { isLocalAdmin } from "@/lib/admin-auth";
+
 import { findUser } from "@/lib/users-store";
 
 export default function LoginPage() {
   const router = useRouter();
 
-  const [login, setLogin] = useState("");
-  const [password, setPassword] = useState("");
+  const [login, setLogin] =
+    useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [password, setPassword] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
 
   async function handleLogin(
     event: React.FormEvent<HTMLFormElement>
@@ -24,82 +42,130 @@ export default function LoginPage() {
     event.preventDefault();
 
     setLoading(true);
+
     setError("");
 
     try {
-      console.log("TENTANDO LOGIN...");
-
-      if (isLocalAdmin(login, password)) {
-        console.log("ADMIN LOCAL ENCONTRADO");
-
-        const response = await fetch(
-          "/api/auth/local-login",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              login,
-              password
-            })
-          }
-        );
-
-        if (response.ok) {
-          console.log("LOGIN ADMIN OK");
-
-          router.replace("/dashboard");
-          router.refresh();
-
-          return;
-        }
-      }
-
-      console.log("BUSCANDO USER NO SUPABASE...");
-
-      const user = await findUser(
-        login,
-        password
+      console.log(
+        "TENTANDO LOGIN..."
       );
 
-      if (user) {
-        console.log("USER ENCONTRADO:", user);
-
-        const response = await fetch(
-          "/api/auth/local-user-login",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              ok: true,
-              user
-            })
-          }
+      if (
+        isLocalAdmin(
+          login,
+          password
+        )
+      ) {
+        console.log(
+          "ADMIN LOCAL ENCONTRADO"
         );
 
-        if (response.ok) {
-          console.log("LOGIN USER OK");
+        const response =
+          await fetch(
+            "/api/auth/local-login",
+            {
+              method: "POST",
 
-          router.replace("/dashboard");
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                login,
+                password
+              })
+            }
+          );
+
+        if (response.ok) {
+          console.log(
+            "LOGIN ADMIN OK"
+          );
+
+          router.replace(
+            "/dashboard"
+          );
+
           router.refresh();
 
           return;
         }
       }
 
-      console.log("LOGIN INVÁLIDO");
+      console.log(
+        "BUSCANDO USER NO SUPABASE..."
+      );
 
-      setError("Login ou senha inválidos.");
+      const user =
+        await findUser(
+          login,
+          password
+        );
+
+      if (user) {
+        console.log(
+          "USER ENCONTRADO:",
+          user
+        );
+
+        const response =
+          await fetch(
+            "/api/auth/local-user-login",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                id: user.id,
+                name: user.name,
+                login:
+                  user.login,
+                is_admin:
+                  user.is_admin ??
+                  false,
+                can_create_templates:
+                  user.can_create_templates ??
+                  false
+              })
+            }
+          );
+
+        if (response.ok) {
+          console.log(
+            "LOGIN USER OK"
+          );
+
+          router.replace(
+            "/dashboard"
+          );
+
+          router.refresh();
+
+          return;
+        }
+      }
+
+      console.log(
+        "LOGIN INVÁLIDO"
+      );
+
+      setError(
+        "Login ou senha inválidos."
+      );
     } catch (error) {
       console.error(
         "ERRO GERAL LOGIN:",
         error
       );
 
-      setError("Erro ao realizar login.");
+      setError(
+        "Erro ao realizar login."
+      );
     } finally {
       setLoading(false);
     }
@@ -110,13 +176,16 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>
-            Entrar no CS Inteligente
+            Entrar no CS
+            Inteligente
           </CardTitle>
         </CardHeader>
 
         <CardContent>
           <form
-            onSubmit={handleLogin}
+            onSubmit={
+              handleLogin
+            }
             className="space-y-4"
           >
             <div className="space-y-2">
@@ -127,8 +196,13 @@ export default function LoginPage() {
               <Input
                 id="login"
                 value={login}
-                onChange={(event) =>
-                  setLogin(event.target.value)
+                onChange={(
+                  event
+                ) =>
+                  setLogin(
+                    event.target
+                      .value
+                  )
                 }
                 required
               />
@@ -143,8 +217,13 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(event) =>
-                  setPassword(event.target.value)
+                onChange={(
+                  event
+                ) =>
+                  setPassword(
+                    event.target
+                      .value
+                  )
                 }
                 required
               />
