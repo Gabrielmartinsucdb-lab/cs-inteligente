@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
-export async function POST(request: Request) {
-  const body = await request.json();
+export async function POST(
+  request: Request
+) {
+  const body =
+    await request.json();
 
   const {
     id,
@@ -14,7 +17,8 @@ export async function POST(request: Request) {
   if (!login) {
     return NextResponse.json(
       {
-        error: "Credenciais inválidas"
+        error:
+          "Credenciais inválidas"
       },
       {
         status: 401
@@ -22,28 +26,41 @@ export async function POST(request: Request) {
     );
   }
 
-  const response = NextResponse.json({
-    ok: true
-  });
+  const response =
+    NextResponse.json({
+      ok: true
+    });
+
+  const session =
+    encodeURIComponent(
+      JSON.stringify({
+        id,
+        name,
+        login,
+        is_admin,
+        can_create_templates
+      })
+    );
 
   response.cookies.set(
     "cs_user_session",
-    JSON.stringify({
-      id,
-      name,
-      login,
-      is_admin,
-      can_create_templates
-    }),
+    session,
     {
-      httpOnly: true,
+      httpOnly: false,
+
       sameSite: "lax",
+
       secure:
         process.env.NODE_ENV ===
         "production",
+
       path: "/",
+
       maxAge:
-        60 * 60 * 24 * 7
+        60 *
+        60 *
+        24 *
+        7
     }
   );
 

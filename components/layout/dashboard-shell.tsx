@@ -35,6 +35,11 @@ export async function DashboardShell({
       "cs_user_session"
     )?.value;
 
+  console.log(
+    "COOKIE SESSION:",
+    sessionCookie
+  );
+
   if (!sessionCookie) {
     redirect("/login");
   }
@@ -44,14 +49,22 @@ export async function DashboardShell({
     | null = null;
 
   try {
-    user = JSON.parse(
+    const decoded =
       decodeURIComponent(
         sessionCookie
-      )
+      );
+
+    user = JSON.parse(
+      decoded
+    );
+
+    console.log(
+      "USER SESSION:",
+      user
     );
   } catch (error) {
     console.error(
-      "ERRO SESSION:",
+      "ERRO PARSE SESSION:",
       error
     );
 
