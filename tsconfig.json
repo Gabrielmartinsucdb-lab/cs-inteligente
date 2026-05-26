@@ -31,8 +31,9 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".next-users-gpts/types/**/*.ts",
     "next-env.d.ts",
-    ".next-users-gpts/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
