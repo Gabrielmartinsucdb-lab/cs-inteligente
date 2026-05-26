@@ -1,33 +1,87 @@
 import { ReactNode } from "react";
+
 import { cookies } from "next/headers";
+
 import { redirect } from "next/navigation";
+
 import { MobileNav } from "@/components/layout/mobile-nav";
+
 import { Sidebar } from "@/components/layout/sidebar";
+
 import { Topbar } from "@/components/layout/topbar";
-import { LOCAL_ADMIN } from "@/lib/admin-auth";
-import { createClient } from "@/lib/supabase-server";
 
-export async function DashboardShell({ children }: { children: ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  const cookieStore = await cookies();
-  const localAdmin = cookieStore.get(LOCAL_ADMIN.cookieName)?.value === "true";
-  const localUser = cookieStore.get(LOCAL_ADMIN.userCookieName)?.value === "true";
-  const isSupabaseAdmin =
-    user?.email === LOCAL_ADMIN.email || user?.user_metadata?.role === "admin";
-  const isAdmin = localAdmin || isSupabaseAdmin;
+type SessionUser = {
+  id: string;
 
-  if (!user && !localAdmin && !localUser) redirect("/login");
+  name: string;
+
+  login: string;
+
+  is_admin: boolean;
+
+  can_create_templates: boolean;
+};
+
+export async function DashboardShell({
+  children
+}: {
+  children: ReactNode;
+}) {
+  const cookieStore =
+    await cookies();
+
+  const sessionCookie =
+    cookieStore.get(
+      "cs_user_session"
+    )?.value;
+
+  if (!sessionCookie) {
+    redirect("/login");
+  }
+
+  let user:
+    | SessionUser
+    | null = null;
+
+  try {
+    user = JSON.parse(
+      decodeURIComponent(
+        sessionCookie
+      )
+    );
+  } catch (error) {
+    console.error(
+      "ERRO SESSION:",
+      error
+    );
+
+    redirect("/login");
+  }
+
+  if (!user) {
+    redirect("/login");
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar isAdmin={isAdmin} />
+      <Sidebar
+        isAdmin={
+          user.is_admin
+        }
+      />
+
       <div className="flex min-h-screen flex-1 flex-col">
         <Topbar />
-        <main className="flex-1 p-4 pb-20 lg:p-8">{children}</main>
-        <MobileNav isAdmin={isAdmin} />
+
+        <main className="flex-1 p-4 pb-20 lg:p-8">
+          {children}
+        </main>
+
+        <MobileNav
+          isAdmin={
+            user.is_admin
+          }
+        />
       </div>
     </div>
   );
