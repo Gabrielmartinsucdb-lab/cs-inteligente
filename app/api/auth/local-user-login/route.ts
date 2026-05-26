@@ -6,41 +6,15 @@ export async function POST(
   const body =
     await request.json();
 
-  const {
-    id,
-    name,
-    login,
-    is_admin,
-    can_create_templates
-  } = body;
-
-  if (!login) {
-    return NextResponse.json(
-      {
-        error:
-          "Credenciais inválidas"
-      },
-      {
-        status: 401
-      }
+  const session =
+    encodeURIComponent(
+      JSON.stringify(body)
     );
-  }
 
   const response =
     NextResponse.json({
       ok: true
     });
-
-  const session =
-    encodeURIComponent(
-      JSON.stringify({
-        id,
-        name,
-        login,
-        is_admin,
-        can_create_templates
-      })
-    );
 
   response.cookies.set(
     "cs_user_session",
@@ -48,11 +22,9 @@ export async function POST(
     {
       httpOnly: false,
 
-      sameSite: "lax",
+      secure: false,
 
-      secure:
-        process.env.NODE_ENV ===
-        "production",
+      sameSite: "lax",
 
       path: "/",
 

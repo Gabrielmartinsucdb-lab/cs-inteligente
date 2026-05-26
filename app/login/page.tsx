@@ -20,7 +20,8 @@ import { Label } from "@/components/ui/label";
 import { findUser } from "@/lib/users-store";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
   const [login, setLogin] =
     useState("");
@@ -44,73 +45,68 @@ export default function LoginPage() {
     setError("");
 
     try {
-      console.log(
-        "BUSCANDO USER NO SUPABASE..."
-      );
-
       const user =
         await findUser(
           login,
           password
         );
 
-      if (user) {
-        console.log(
-          "USER ENCONTRADO:",
-          user
+      if (!user) {
+        setError(
+          "Login ou senha inválidos."
         );
 
-        const response =
-          await fetch(
-            "/api/auth/local-user-login",
-            {
-              method: "POST",
+        setLoading(false);
 
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body: JSON.stringify({
-                id: user.id,
-                name: user.name,
-                login:
-                  user.login,
-                is_admin:
-                  user.is_admin ??
-                  false,
-                can_create_templates:
-                  user.can_create_templates ??
-                  false
-              })
-            }
-          );
-
-        if (response.ok) {
-          console.log(
-            "LOGIN USER OK"
-          );
-
-          router.replace(
-            "/dashboard"
-          );
-
-          router.refresh();
-
-          return;
-        }
+        return;
       }
 
-      console.log(
-        "LOGIN INVÁLIDO"
-      );
+      const response =
+        await fetch(
+          "/api/auth/local-user-login",
+          {
+            method: "POST",
 
-      setError(
-        "Login ou senha inválidos."
-      );
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            credentials:
+              "include",
+
+            body: JSON.stringify({
+              id: user.id,
+
+              name:
+                user.name,
+
+              login:
+                user.login,
+
+              is_admin:
+                user.is_admin,
+
+              can_create_templates:
+                user.can_create_templates
+            })
+          }
+        );
+
+      if (!response.ok) {
+        setError(
+          "Erro ao criar sessão."
+        );
+
+        setLoading(false);
+
+        return;
+      }
+
+      window.location.href =
+        "/dashboard";
     } catch (error) {
       console.error(
-        "ERRO GERAL LOGIN:",
         error
       );
 
