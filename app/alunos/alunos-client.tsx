@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useMemo,
   useRef,
   useState
 } from "react";
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 
 type Student = {
   id: string;
@@ -53,6 +55,12 @@ type StudentApiResult = {
 };
 
 const localStorageKey = "cs_students";
+
+const mentorshipOptions = [
+  "LexAi Pro",
+  "Liga dos Mentores",
+  "Fabrica de Intercessores"
+];
 
 const emptyForm: StudentForm = {
   mentorship: "",
@@ -174,6 +182,17 @@ function studentPayload(form: StudentForm) {
   };
 }
 
+function normalizeMentorship(value: string) {
+  const cleanValue = value.trim();
+  const match = mentorshipOptions.find(
+    (option) =>
+      option.toLowerCase() ===
+      cleanValue.toLowerCase()
+  );
+
+  return match ?? cleanValue;
+}
+
 export function AlunosClient() {
   const fileRef =
     useRef<HTMLInputElement>(null);
@@ -191,6 +210,19 @@ export function AlunosClient() {
     useState("");
   const [loading, setLoading] =
     useState(true);
+  const [selectedMentorship, setSelectedMentorship] =
+    useState("Todos");
+
+  const filteredItems = useMemo(() => {
+    if (selectedMentorship === "Todos")
+      return items;
+
+    return items.filter(
+      (item) =>
+        (item.mentorship ?? "") ===
+        selectedMentorship
+    );
+  }, [items, selectedMentorship]);
 
   function showMessage(next: string) {
     setMessage(next);
@@ -292,6 +324,13 @@ export function AlunosClient() {
 
     setForm(emptyForm);
     setEditingId(null);
+    if (
+      payload.mentorship &&
+      selectedMentorship !== "Todos" &&
+      payload.mentorship !== selectedMentorship
+    ) {
+      setSelectedMentorship(payload.mentorship);
+    }
     showMessage("Aluno salvo.");
   }
 
@@ -442,7 +481,7 @@ export function AlunosClient() {
 
   async function exportXlsx() {
     const XLSX = await import("xlsx");
-    const rows = items.map((item) => ({
+    const rows = filteredItems.map((item) => ({
       mentoria: item.mentorship ?? "",
       nome: item.name,
       telefone: item.phone ?? "",
@@ -486,9 +525,13 @@ export function AlunosClient() {
     const payload = rows
       .map((row) => ({
         mentorship: String(
-          row.mentorship ??
-            row.mentoria ??
-            ""
+          normalizeMentorship(
+            String(
+              row.mentorship ??
+                row.mentoria ??
+                ""
+            )
+          )
         ),
         name: String(
           row.name ?? row.nome ?? ""
@@ -549,7 +592,7 @@ export function AlunosClient() {
           >
             <div className="space-y-2">
               <Label>Mentoria</Label>
-              <Input
+              <Select
                 value={form.mentorship}
                 onChange={(event) =>
                   setForm({
@@ -558,7 +601,22 @@ export function AlunosClient() {
                       event.target.value
                   })
                 }
-              />
+                required
+              >
+                <option value="">
+                  Selecione a mentoria
+                </option>
+                {mentorshipOptions.map(
+                  (mentorship) => (
+                    <option
+                      key={mentorship}
+                      value={mentorship}
+                    >
+                      {mentorship}
+                    </option>
+                  )
+                )}
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -664,6 +722,43 @@ export function AlunosClient() {
       </Card>
 
       <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {["Todos", ...mentorshipOptions].map(
+            (mentorship) => {
+              const active =
+                selectedMentorship ===
+                mentorship;
+              const count =
+                mentorship === "Todos"
+                  ? items.length
+                  : items.filter(
+                      (item) =>
+                        (item.mentorship ??
+                          "") === mentorship
+                    ).length;
+
+              return (
+                <Button
+                  key={mentorship}
+                  type="button"
+                  variant={
+                    active
+                      ? "default"
+                      : "outline"
+                  }
+                  onClick={() =>
+                    setSelectedMentorship(
+                      mentorship
+                    )
+                  }
+                >
+                  {mentorship} ({count})
+                </Button>
+              );
+            }
+          )}
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
@@ -731,18 +826,18 @@ export function AlunosClient() {
               ) : null}
 
               {!loading &&
-              items.length === 0 ? (
+              filteredItems.length === 0 ? (
                 <tr>
                   <td
                     className="p-4 text-sm text-slate-500"
                     colSpan={8}
                   >
-                    Nenhum aluno cadastrado.
+                    Nenhum aluno nesta mentoria.
                   </td>
                 </tr>
               ) : null}
 
-              {items.map((item) => {
+              {filteredItems.map((item) => {
                 const isActive =
                   item.is_active ?? true;
 
