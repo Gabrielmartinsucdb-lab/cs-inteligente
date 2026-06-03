@@ -26,7 +26,8 @@ const emptyForm = {
   login: "",
   password: "",
   is_admin: false,
-  can_create_templates: false
+  can_create_templates: false,
+  is_cs: false
 };
 
 function formatDate(date: string) {
@@ -183,7 +184,8 @@ export function UsuariosClient() {
       is_admin: Boolean(item.is_admin),
       can_create_templates: Boolean(
         item.can_create_templates
-      )
+      ),
+      is_cs: Boolean(item.is_cs)
     });
   }
 
@@ -317,6 +319,25 @@ export function UsuariosClient() {
                   Pode criar templates
                 </span>
               </label>
+
+              <label className="mt-3 flex items-start gap-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={form.is_cs}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      is_cs:
+                        event.target.checked
+                    })
+                  }
+                />
+
+                <span>
+                  CS
+                </span>
+              </label>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -387,8 +408,15 @@ export function UsuariosClient() {
                     </span>
                   ) : null}
 
+                  {item.is_cs ? (
+                    <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+                      CS
+                    </span>
+                  ) : null}
+
                   {!item.is_admin &&
-                  !item.can_create_templates ? (
+                  !item.can_create_templates &&
+                  !item.is_cs ? (
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
                       Acesso básico
                     </span>

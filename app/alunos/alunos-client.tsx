@@ -26,6 +26,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import {
+  DEFAULT_CS_NAMES,
+  MENTORSHIP_OPTIONS,
+  normalizeMentorship
+} from "@/lib/options";
+import {
+  listUsers,
+  type User
+} from "@/lib/users-store";
 
 type Student = {
   id: string;
@@ -55,12 +64,6 @@ type StudentApiResult = {
 };
 
 const localStorageKey = "cs_students";
-
-const mentorshipOptions = [
-  "LexAi Pro",
-  "Liga dos Mentores",
-  "Fabrica de Intercessores"
-];
 
 const emptyForm: StudentForm = {
   mentorship: "",
@@ -182,17 +185,6 @@ function studentPayload(form: StudentForm) {
   };
 }
 
-function normalizeMentorship(value: string) {
-  const cleanValue = value.trim();
-  const match = mentorshipOptions.find(
-    (option) =>
-      option.toLowerCase() ===
-      cleanValue.toLowerCase()
-  );
-
-  return match ?? cleanValue;
-}
-
 export function AlunosClient() {
   const fileRef =
     useRef<HTMLInputElement>(null);
@@ -212,6 +204,22 @@ export function AlunosClient() {
     useState(true);
   const [selectedMentorship, setSelectedMentorship] =
     useState("Todos");
+  const [users, setUsers] =
+    useState<User[]>([]);
+
+  const csOptions = useMemo(() => {
+    const userCs = users
+      .filter((user) => user.is_cs)
+      .map((user) => user.name);
+
+    return Array.from(
+      new Set([
+        ...DEFAULT_CS_NAMES,
+        ...userCs,
+        form.cs_responsible
+      ].filter(Boolean))
+    );
+  }, [form.cs_responsible, users]);
 
   const filteredItems = useMemo(() => {
     if (selectedMentorship === "Todos")
@@ -260,6 +268,7 @@ export function AlunosClient() {
 
   useEffect(() => {
     void loadItems();
+    void listUsers().then(setUsers);
   }, []);
 
   async function save(
@@ -606,7 +615,7 @@ export function AlunosClient() {
                 <option value="">
                   Selecione a mentoria
                 </option>
-                {mentorshipOptions.map(
+                {MENTORSHIP_OPTIONS.map(
                   (mentorship) => (
                     <option
                       key={mentorship}
@@ -665,7 +674,7 @@ export function AlunosClient() {
 
             <div className="space-y-2">
               <Label>CS responsável</Label>
-              <Input
+              <Select
                 value={form.cs_responsible}
                 onChange={(event) =>
                   setForm({
@@ -674,8 +683,19 @@ export function AlunosClient() {
                       event.target.value
                   })
                 }
-                placeholder="Nome do CS"
-              />
+              >
+                <option value="">
+                  Selecione o CS
+                </option>
+                {csOptions.map((csName) => (
+                  <option
+                    key={csName}
+                    value={csName}
+                  >
+                    {csName}
+                  </option>
+                ))}
+              </Select>
             </div>
 
             <label className="flex items-center gap-3 rounded-md border bg-slate-50 p-3 text-sm text-slate-700">
@@ -723,7 +743,7 @@ export function AlunosClient() {
 
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2">
-          {["Todos", ...mentorshipOptions].map(
+          {["Todos", ...MENTORSHIP_OPTIONS].map(
             (mentorship) => {
               const active =
                 selectedMentorship ===

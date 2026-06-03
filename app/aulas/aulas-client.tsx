@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { MENTORSHIP_OPTIONS } from "@/lib/options";
 import {
   deleteCourseLesson,
   listCourseLessons,
@@ -14,7 +15,7 @@ import {
   type CourseLesson
 } from "@/lib/course-lessons-store";
 
-const emptyForm = { title: "", ai_tool: "", category: "", link: "", tags: "" };
+const emptyForm = { title: "", mentorship: "", ai_tool: "", category: "", link: "", tags: "" };
 
 export function AulasClient() {
   const [items, setItems] = useState<CourseLesson[]>([]);
@@ -40,7 +41,7 @@ export function AulasClient() {
 
   const categories = useMemo(() => Array.from(new Set(items.map((item) => item.category).filter(Boolean))), [items]);
   const filtered = items.filter((item) => {
-    const text = `${item.title} ${item.ai_tool} ${item.category} ${item.tags}`.toLowerCase();
+    const text = `${item.title} ${item.mentorship} ${item.ai_tool} ${item.category} ${item.tags}`.toLowerCase();
     return text.includes(search.toLowerCase()) && (!category || item.category === category);
   });
 
@@ -50,6 +51,7 @@ export function AulasClient() {
     const result = await saveCourseLesson(
       {
         title: form.title.trim(),
+        mentorship: form.mentorship.trim(),
         ai_tool: form.ai_tool.trim(),
         category: form.category.trim(),
         link: form.link.trim(),
@@ -86,6 +88,15 @@ export function AulasClient() {
         <CardContent>
           <form onSubmit={save} className="space-y-4">
             <div className="space-y-2"><Label>Nome</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
+            <div className="space-y-2">
+              <Label>Mentoria</Label>
+              <Select value={form.mentorship} onChange={(e) => setForm({ ...form, mentorship: e.target.value })} required>
+                <option value="">Selecione a mentoria</option>
+                {MENTORSHIP_OPTIONS.map((mentorship) => (
+                  <option key={mentorship} value={mentorship}>{mentorship}</option>
+                ))}
+              </Select>
+            </div>
             <div className="space-y-2"><Label>Ferramenta IA</Label><Input value={form.ai_tool} onChange={(e) => setForm({ ...form, ai_tool: e.target.value })} /></div>
             <div className="space-y-2"><Label>Categoria</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
             <div className="space-y-2"><Label>Link</Label><Input value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} required /></div>
@@ -119,13 +130,13 @@ export function AulasClient() {
               <CardContent className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="font-semibold">{item.title}</h3>
-                  <p className="mt-1 text-sm text-slate-500">{item.ai_tool} · {item.category}</p>
+                  <p className="mt-1 text-sm text-slate-500">{item.mentorship || "Sem mentoria"} · {item.ai_tool} · {item.category}</p>
                   <p className="mt-2 text-sm text-slate-600">{item.tags}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" size="icon" onClick={() => copyMessage(item.link)} aria-label="Copiar mensagem"><Copy className="h-4 w-4" /></Button>
                   <Button variant="outline" size="icon" onClick={() => window.open(item.link, "_blank")} aria-label="Abrir link"><ExternalLink className="h-4 w-4" /></Button>
-                  <Button variant="outline" size="icon" onClick={() => { setEditingId(item.id); setForm({ title: item.title, ai_tool: item.ai_tool, category: item.category, link: item.link, tags: item.tags }); }} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="outline" size="icon" onClick={() => { setEditingId(item.id); setForm({ title: item.title, mentorship: item.mentorship ?? "", ai_tool: item.ai_tool, category: item.category, link: item.link, tags: item.tags }); }} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
                   <Button variant="danger" size="icon" onClick={() => remove(item.id)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </CardContent>

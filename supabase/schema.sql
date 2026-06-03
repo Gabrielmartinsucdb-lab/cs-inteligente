@@ -10,12 +10,16 @@ create table if not exists public.message_templates (
 create table if not exists public.course_lessons (
   id uuid primary key default gen_random_uuid(),
   title text not null,
+  mentorship text,
   ai_tool text,
   category text,
   link text not null,
   tags text,
   created_at timestamptz not null default now()
 );
+
+alter table public.course_lessons
+  add column if not exists mentorship text;
 
 create table if not exists public.gpts (
   id uuid primary key default gen_random_uuid(),
@@ -39,11 +43,25 @@ create table if not exists public.students (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.users (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  login text not null unique,
+  password text not null,
+  is_admin boolean not null default false,
+  can_create_templates boolean not null default false,
+  is_cs boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
 alter table public.students
   add column if not exists cs_responsible text,
   add column if not exists last_meeting_at timestamptz,
   add column if not exists meetings_count integer not null default 0,
   add column if not exists is_active boolean not null default true;
+
+alter table public.users
+  add column if not exists is_cs boolean not null default false;
 
 alter table public.message_templates enable row level security;
 alter table public.course_lessons enable row level security;

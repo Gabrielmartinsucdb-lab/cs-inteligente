@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase-browser";
 export type CourseLesson = {
   id: string;
   title: string;
+  mentorship: string;
   ai_tool: string;
   category: string;
   link: string;
@@ -14,6 +15,7 @@ export type CourseLesson = {
 
 type LessonPayload = {
   title: string;
+  mentorship: string;
   ai_tool: string;
   category: string;
   link: string;
@@ -109,6 +111,7 @@ function createLocalLesson(
   return {
     id: crypto.randomUUID(),
     title: payload.title,
+    mentorship: payload.mentorship,
     ai_tool: payload.ai_tool,
     category: payload.category,
     link: payload.link,
@@ -244,6 +247,7 @@ export async function saveCourseLesson(
         .from("course_lessons")
         .update({
           title: payload.title,
+          mentorship: payload.mentorship,
           ai_tool: payload.ai_tool,
           category: payload.category,
           link: payload.link,
@@ -263,6 +267,7 @@ export async function saveCourseLesson(
         .from("course_lessons")
         .insert({
           title: payload.title,
+          mentorship: payload.mentorship,
           ai_tool: payload.ai_tool,
           category: payload.category,
           link: payload.link,

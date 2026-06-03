@@ -12,6 +12,8 @@ export type User = {
 
   can_create_templates: boolean;
 
+  is_cs: boolean;
+
   created_at: string;
 };
 
@@ -22,6 +24,7 @@ export type UserPayload = {
   password: string;
   is_admin: boolean;
   can_create_templates: boolean;
+  is_cs: boolean;
 };
 
 const localStorageKey =
@@ -153,7 +156,10 @@ export async function saveUser(
               payload.is_admin,
 
             can_create_templates:
-              payload.can_create_templates
+              payload.can_create_templates,
+
+            is_cs:
+              payload.is_cs
           })
           .eq(
             "id",
@@ -185,7 +191,10 @@ export async function saveUser(
               payload.is_admin,
 
             can_create_templates:
-              payload.can_create_templates
+              payload.can_create_templates,
+
+            is_cs:
+              payload.is_cs
           });
 
       if (error) {
