@@ -27,46 +27,241 @@ const months: Record<string, string> = {
   dezembro: "12"
 };
 
-function normalizeTime(value: string) {
-  return value.replace(/\s*h\s*/i, ":").replace(/\s+/g, "").replace(/:$/, ":00");
+const brasiliaOffsetMinutes = -3 * 60;
+
+const timezoneOffsets: Record<string, number> = {
+  BRT: -3 * 60,
+  BRST: -2 * 60,
+  EST: -5 * 60,
+  EDT: -4 * 60,
+  CST: -6 * 60,
+  CDT: -5 * 60,
+  MST: -7 * 60,
+  MDT: -6 * 60,
+  PST: -8 * 60,
+  PDT: -7 * 60,
+  ART: -3 * 60,
+  CLT: -4 * 60,
+  CEST: 2 * 60,
+  CET: 60,
+  WEST: 60,
+  WET: 0
+};
+
+const ianaTimezoneOffsets: Record<string, number> = {
+  "america/sao_paulo": -3 * 60,
+  "america/campo_grande": -4 * 60,
+  "america/cuiaba": -4 * 60,
+  "america/manaus": -4 * 60,
+  "america/rio_branco": -5 * 60,
+  "america/new_york": -4 * 60,
+  "america/chicago": -5 * 60,
+  "america/denver": -6 * 60,
+  "america/los_angeles": -7 * 60,
+  "europe/london": 60,
+  "europe/lisbon": 60
+};
+
+type DateParts = {
+  day: number;
+  month: number;
+  year: number;
+  hasYear: boolean;
+};
+
+type TimeParts = {
+  hour: number;
+  minute: number;
+};
+
+function formatTwoDigits(value: number) {
+  return String(value).padStart(2, "0");
 }
 
-function extractDate(text: string) {
-  const numericDate =
-    text.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0] ??
-    text.match(/\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/)?.[0];
+function formatTime(parts: TimeParts) {
+  return `${formatTwoDigits(parts.hour)}:${formatTwoDigits(parts.minute)}`;
+}
 
-  if (numericDate) return numericDate;
+function formatDateParts(parts: DateParts) {
+  const date = `${formatTwoDigits(parts.day)}/${formatTwoDigits(parts.month)}`;
+
+  return parts.hasYear ? `${date}/${parts.year}` : date;
+}
+
+function normalizeYear(value?: string) {
+  if (!value) return new Date().getFullYear();
+
+  const year = Number(value);
+
+  return year < 100 ? 2000 + year : year;
+}
+
+function parseDateParts(text: string): DateParts | null {
+  const isoDate = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+
+  if (isoDate) {
+    return {
+      day: Number(isoDate[3]),
+      month: Number(isoDate[2]),
+      year: Number(isoDate[1]),
+      hasYear: true
+    };
+  }
+
+  const numericDate = text.match(/\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/);
+
+  if (numericDate) {
+    return {
+      day: Number(numericDate[1]),
+      month: Number(numericDate[2]),
+      year: normalizeYear(numericDate[3]),
+      hasYear: Boolean(numericDate[3])
+    };
+  }
 
   const longDate = text.match(
     /\b(\d{1,2})\s+de\s+(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+(\d{4}))?\b/i
   );
 
-  if (!longDate) return "";
+  if (!longDate) return null;
 
-  const day = longDate[1].padStart(2, "0");
-  const month = months[longDate[2].toLowerCase()] ?? "";
-  const year = longDate[3] ? `/${longDate[3]}` : "";
+  return {
+    day: Number(longDate[1]),
+    month: Number(months[longDate[2].toLowerCase()] ?? "0"),
+    year: normalizeYear(longDate[3]),
+    hasYear: Boolean(longDate[3])
+  };
+}
 
-  return `${day}/${month}${year}`;
+function normalizeMeridiem(value?: string) {
+  return value?.replaceAll(".", "").toLowerCase();
+}
+
+function stripTimezoneHints(value: string) {
+  return value
+    .replace(/\b(?:GMT|UTC)\s*[+-]\s*\d{1,2}(?::?[0-5]\d)?\b/gi, "")
+    .replace(/\b[A-Za-z_]+\/[A-Za-z_]+(?:\/[A-Za-z_]+)?\b/g, "")
+    .replace(/\b(BRT|BRST|EST|EDT|CST|CDT|MST|MDT|PST|PDT|ART|CLT|CEST|CET|WEST|WET)\b/gi, "");
+}
+
+function parseTimeParts(value: string): TimeParts | null {
+  const cleanValue = stripTimezoneHints(value);
+  const amPmMatch = cleanValue.match(/\b(\d{1,2})(?::|h)?([0-5]\d)?\s*(a\.?m\.?|p\.?m\.?)\b/i);
+
+  if (amPmMatch) {
+    const meridiem = normalizeMeridiem(amPmMatch[3]);
+    let hour = Number(amPmMatch[1]);
+
+    if (meridiem === "pm" && hour < 12) hour += 12;
+    if (meridiem === "am" && hour === 12) hour = 0;
+
+    return {
+      hour,
+      minute: Number(amPmMatch[2] ?? "00")
+    };
+  }
+
+  const timeMatch = cleanValue.match(/\b([01]?\d|2[0-3])(?::|h)([0-5]\d)?\b/i);
+
+  if (!timeMatch) return null;
+
+  return {
+    hour: Number(timeMatch[1]),
+    minute: Number(timeMatch[2] ?? "00")
+  };
+}
+
+function detectTimezoneOffset(text: string) {
+  if (/\b(?:hor[aá]rio\s+de\s+bras[ií]lia|bras[ií]lia|brt)\b/i.test(text)) {
+    return brasiliaOffsetMinutes;
+  }
+
+  const explicitOffset = text.match(/\b(?:GMT|UTC)\s*([+-])\s*(\d{1,2})(?::?([0-5]\d))?\b/i);
+
+  if (explicitOffset) {
+    const direction = explicitOffset[1] === "-" ? -1 : 1;
+    const hours = Number(explicitOffset[2]);
+    const minutes = Number(explicitOffset[3] ?? "00");
+
+    return direction * (hours * 60 + minutes);
+  }
+
+  const ianaMatch = text.match(/\b[A-Za-z_]+\/[A-Za-z_]+(?:\/[A-Za-z_]+)?\b/);
+
+  if (ianaMatch) {
+    const offset = ianaTimezoneOffsets[ianaMatch[0].toLowerCase()];
+
+    if (typeof offset === "number") return offset;
+  }
+
+  const abbreviationMatch = text.match(/\b(BRT|BRST|EST|EDT|CST|CDT|MST|MDT|PST|PDT|ART|CLT|CEST|CET|WEST|WET)\b/i);
+
+  if (!abbreviationMatch) return null;
+
+  return timezoneOffsets[abbreviationMatch[1].toUpperCase()] ?? null;
+}
+
+function convertToBrasilia(
+  date: DateParts | null,
+  time: TimeParts,
+  sourceOffsetMinutes: number
+) {
+  const baseDate = date ?? {
+    day: 1,
+    month: 1,
+    year: new Date().getFullYear(),
+    hasYear: false
+  };
+  const utcTime =
+    Date.UTC(
+      baseDate.year,
+      baseDate.month - 1,
+      baseDate.day,
+      time.hour,
+      time.minute
+    ) -
+    sourceOffsetMinutes * 60 * 1000;
+  const brasiliaTime = new Date(
+    utcTime + brasiliaOffsetMinutes * 60 * 1000
+  );
+
+  return {
+    date: {
+      day: brasiliaTime.getUTCDate(),
+      month: brasiliaTime.getUTCMonth() + 1,
+      year: brasiliaTime.getUTCFullYear(),
+      hasYear: baseDate.hasYear
+    },
+    time: {
+      hour: brasiliaTime.getUTCHours(),
+      minute: brasiliaTime.getUTCMinutes()
+    }
+  };
+}
+
+function extractDate(text: string) {
+  const date = parseDateParts(text);
+
+  return date ? formatDateParts(date) : "";
 }
 
 function extractTime(text: string) {
   const rangeMatch = text.match(
-    /\b([01]?\d|2[0-3])(?::|h)([0-5]\d)?\s*(?:-|–|—|às|as|a)\s*([01]?\d|2[0-3])(?::|h)([0-5]\d)?\b/i
+    /\b(\d{1,2})(?::|h)?([0-5]\d)?\s*(a\.?m\.?|p\.?m\.?)?\s*(?:-|–|—|às|as|a)\s*(\d{1,2})(?::|h)?([0-5]\d)?\s*(a\.?m\.?|p\.?m\.?)?\b/i
   );
 
   if (rangeMatch) {
-    const hour = rangeMatch[1].padStart(2, "0");
-    const minutes = rangeMatch[2] ?? "00";
-    return `${hour}:${minutes}`;
+    const meridiem = rangeMatch[3] ?? rangeMatch[6] ?? "";
+    const time = parseTimeParts(
+      `${rangeMatch[1]}:${rangeMatch[2] ?? "00"} ${meridiem}`
+    );
+
+    return time ? formatTime(time) : "";
   }
 
-  const timeMatch = text.match(/\b([01]?\d|2[0-3])(?::|h)([0-5]\d)?\b/i);
+  const time = parseTimeParts(text);
 
-  if (!timeMatch) return "";
-
-  return normalizeTime(timeMatch[0]).replace(/^(\d):/, "0$1:");
+  return time ? formatTime(time) : "";
 }
 
 function parseCalendarText(text: string) {
@@ -83,6 +278,13 @@ function parseCalendarText(text: string) {
     ) ?? text;
   const time = extractTime(dateLine) || extractTime(text);
   const date = extractDate(dateLine) || extractDate(text);
+  const sourceOffset = detectTimezoneOffset(text);
+  const parsedDateParts = parseDateParts(dateLine) || parseDateParts(text);
+  const parsedTimeParts = parseTimeParts(dateLine) || parseTimeParts(text);
+  const brasiliaDateTime =
+    typeof sourceOffset === "number" && parsedTimeParts
+      ? convertToBrasilia(parsedDateParts, parsedTimeParts, sourceOffset)
+      : null;
   const name =
     lines.find((line) => {
       const lower = line.toLowerCase();
@@ -96,7 +298,16 @@ function parseCalendarText(text: string) {
     }) ??
     "";
 
-  return { nome: name, data: date, horario: time, link };
+  return {
+    nome: name,
+    data: brasiliaDateTime
+      ? formatDateParts(brasiliaDateTime.date)
+      : date,
+    horario: brasiliaDateTime
+      ? formatTime(brasiliaDateTime.time)
+      : time,
+    link
+  };
 }
 
 function applyTemplate(content: string, values: ReturnType<typeof parseCalendarText>) {
