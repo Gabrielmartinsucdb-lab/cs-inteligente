@@ -32,8 +32,18 @@ create table if not exists public.students (
   name text not null,
   phone text,
   email text,
+  cs_responsible text,
+  last_meeting_at timestamptz,
+  meetings_count integer not null default 0,
+  is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+alter table public.students
+  add column if not exists cs_responsible text,
+  add column if not exists last_meeting_at timestamptz,
+  add column if not exists meetings_count integer not null default 0,
+  add column if not exists is_active boolean not null default true;
 
 alter table public.message_templates enable row level security;
 alter table public.course_lessons enable row level security;
