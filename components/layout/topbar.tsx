@@ -10,10 +10,14 @@ export function Topbar() {
   const router =
     useRouter();
 
-  function logout() {
+  async function logout() {
     localStorage.removeItem(
       "cs_session_user"
     );
+
+    await fetch("/api/auth/local-logout", {
+      method: "POST"
+    });
 
     window.location.href =
       "/login";

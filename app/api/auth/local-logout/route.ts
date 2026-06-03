@@ -17,6 +17,13 @@ export async function POST() {
     path: "/",
     maxAge: 0
   });
+  response.cookies.set("cs_user_session", "", {
+    httpOnly: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0
+  });
 
   return response;
 }

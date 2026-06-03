@@ -29,8 +29,10 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
   const localAdmin = request.cookies.get(LOCAL_ADMIN.cookieName)?.value === "true";
   const localUser = request.cookies.get(LOCAL_ADMIN.userCookieName)?.value === "true";
+  const userSession = Boolean(request.cookies.get("cs_user_session")?.value);
   const isSupabaseAdmin =
     user?.email === LOCAL_ADMIN.email || user?.user_metadata?.role === "admin";
+  const isLocalUser = localUser || userSession;
   const isAdmin = localAdmin || isSupabaseAdmin;
 
   const isLogin = request.nextUrl.pathname.startsWith("/login");
@@ -43,7 +45,7 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/templates") ||
     request.nextUrl.pathname.startsWith("/usuarios");
 
-  if (!user && !localAdmin && !localUser && isProtected && !isLogin) {
+  if (!user && !localAdmin && !isLocalUser && isProtected && !isLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -55,7 +57,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if ((user || localAdmin || localUser) && isLogin) {
+  if ((user || localAdmin || isLocalUser) && isLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
