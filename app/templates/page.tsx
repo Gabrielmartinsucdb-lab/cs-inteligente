@@ -16,8 +16,12 @@ export default async function TemplatesPage() {
   const session = parseLocalSession(cookieStore.get("cs_user_session")?.value);
   const isSupabaseAdmin =
     user?.email === LOCAL_ADMIN.email || user?.user_metadata?.role === "admin";
+  const canManageTemplates =
+    localAdmin ||
+    isSupabaseAdmin ||
+    canAccessTemplates(session);
 
-  if (!localAdmin && !isSupabaseAdmin && !canAccessTemplates(session)) redirect("/dashboard");
+  if (!canManageTemplates) redirect("/dashboard");
 
   return (
     <DashboardShell>
@@ -26,7 +30,14 @@ export default async function TemplatesPage() {
           <h1 className="text-2xl font-semibold">Templates</h1>
           <p className="text-sm text-slate-500">Mensagens com variáveis para o formatador.</p>
         </div>
-        <TemplatesClient />
+        <TemplatesClient
+          canManageTemplates={canManageTemplates}
+          canDeleteTemplates={
+            localAdmin ||
+            isSupabaseAdmin ||
+            Boolean(session?.is_admin)
+          }
+        />
       </div>
     </DashboardShell>
   );

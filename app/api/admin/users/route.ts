@@ -13,10 +13,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
 
-  const { name, login, password } = (await request.json()) as {
+  const { name, login, password, is_admin, can_create_templates } = (await request.json()) as {
     name?: string;
     login?: string;
     password?: string;
+    is_admin?: boolean;
+    can_create_templates?: boolean;
   };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -38,7 +40,13 @@ export async function POST(request: Request) {
     email,
     password,
     email_confirm: true,
-    user_metadata: { name, role: "user", login }
+    user_metadata: {
+      name,
+      role: is_admin ? "admin" : "user",
+      login,
+      is_admin: Boolean(is_admin),
+      can_create_templates: Boolean(can_create_templates)
+    }
   });
 
   if (error && !error.message.toLowerCase().includes("already")) {

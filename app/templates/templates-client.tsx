@@ -130,7 +130,13 @@ function getSessionUser():
   }
 }
 
-export function TemplatesClient() {
+export function TemplatesClient({
+  canManageTemplates = false,
+  canDeleteTemplates = false
+}: {
+  canManageTemplates?: boolean;
+  canDeleteTemplates?: boolean;
+}) {
   const [items, setItems] =
     useState<MessageTemplate[]>(
       []
@@ -168,12 +174,14 @@ export function TemplatesClient() {
     );
 
   const isAdmin =
-    sessionUser?.is_admin ??
-    false;
+    canDeleteTemplates ||
+    (sessionUser?.is_admin ??
+      false);
 
   const canCreateTemplates =
-    sessionUser?.can_create_templates ??
-    false;
+    canManageTemplates ||
+    (sessionUser?.can_create_templates ??
+      false);
 
   const filteredItems =
     useMemo(() => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2, UserPlus } from "lucide-react";
+import { Pencil, Trash2, UserPlus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,9 @@ import {
 const emptyForm = {
   name: "",
   login: "",
-  password: ""
+  password: "",
+  is_admin: false,
+  can_create_templates: false
 };
 
 function formatDate(date: string) {
@@ -46,6 +48,9 @@ export function UsuariosClient() {
   const [form, setForm] = useState(
     emptyForm
   );
+
+  const [editingId, setEditingId] =
+    useState<string | null>(null);
 
   const [saving, setSaving] =
     useState(false);
@@ -91,14 +96,21 @@ export function UsuariosClient() {
       );
 
       const nextItems =
-        await saveUser(form);
+        await saveUser({
+          ...form,
+          id: editingId
+        });
 
       setItems(nextItems);
 
       setForm(emptyForm);
 
+      setEditingId(null);
+
       setMessage(
-        "Usuário salvo."
+        editingId
+          ? "Permissões atualizadas."
+          : "Usuário salvo."
       );
 
       await fetch(
@@ -161,12 +173,34 @@ export function UsuariosClient() {
     }
   }
 
+  function edit(item: User) {
+    setEditingId(item.id);
+
+    setForm({
+      name: item.name,
+      login: item.login,
+      password: item.password,
+      is_admin: Boolean(item.is_admin),
+      can_create_templates: Boolean(
+        item.can_create_templates
+      )
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+
+    setForm(emptyForm);
+  }
+
   return (
     <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
       <Card>
         <CardHeader>
           <CardTitle>
-            Novo usuário
+            {editingId
+              ? "Editar usuário"
+              : "Novo usuário"}
           </CardTitle>
 
           <p className="mt-1 text-xs text-slate-500">
@@ -235,13 +269,78 @@ export function UsuariosClient() {
               />
             </div>
 
-            <Button disabled={saving}>
-              <UserPlus className="h-4 w-4" />
+            <div className="rounded-md border bg-slate-50 p-3">
+              <p className="text-sm font-semibold text-slate-900">
+                Permissões
+              </p>
 
-              {saving
-                ? "Salvando..."
-                : "Criar usuário"}
-            </Button>
+              <label className="mt-3 flex items-start gap-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={
+                    form.is_admin
+                  }
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      is_admin:
+                        event.target
+                          .checked
+                    })
+                  }
+                />
+
+                <span>
+                  Administrador
+                </span>
+              </label>
+
+              <label className="mt-3 flex items-start gap-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={
+                    form.can_create_templates
+                  }
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      can_create_templates:
+                        event.target
+                          .checked
+                    })
+                  }
+                />
+
+                <span>
+                  Pode criar templates
+                </span>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button disabled={saving}>
+                <UserPlus className="h-4 w-4" />
+
+                {saving
+                  ? "Salvando..."
+                  : editingId
+                    ? "Salvar alterações"
+                    : "Criar usuário"}
+              </Button>
+
+              {editingId ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={cancelEdit}
+                >
+                  <X className="h-4 w-4" />
+                  Cancelar
+                </Button>
+              ) : null}
+            </div>
 
             {message ? (
               <p className="text-sm text-emerald-600">
@@ -275,6 +374,27 @@ export function UsuariosClient() {
                   {item.login}
                 </p>
 
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {item.is_admin ? (
+                    <span className="rounded-full bg-slate-950 px-2 py-1 text-xs font-medium text-white">
+                      Administrador
+                    </span>
+                  ) : null}
+
+                  {item.can_create_templates ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
+                      Cria templates
+                    </span>
+                  ) : null}
+
+                  {!item.is_admin &&
+                  !item.can_create_templates ? (
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
+                      Acesso básico
+                    </span>
+                  ) : null}
+                </div>
+
                 <p className="mt-1 text-xs text-slate-400">
                   Criado em{" "}
                   {formatDate(
@@ -283,16 +403,29 @@ export function UsuariosClient() {
                 </p>
               </div>
 
-              <Button
-                variant="danger"
-                size="icon"
-                onClick={() =>
-                  remove(item.id)
-                }
-                aria-label="Excluir"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() =>
+                    edit(item)
+                  }
+                  aria-label="Editar"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  variant="danger"
+                  size="icon"
+                  onClick={() =>
+                    remove(item.id)
+                  }
+                  aria-label="Excluir"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}

@@ -16,9 +16,12 @@ export type User = {
 };
 
 export type UserPayload = {
+  id?: string | null;
   name: string;
   login: string;
   password: string;
+  is_admin: boolean;
+  can_create_templates: boolean;
 };
 
 const localStorageKey =
@@ -120,13 +123,18 @@ export async function saveUser(
     const login =
       payload.login.trim();
 
-    const {
-      data: existing
-    } = await supabase
-      .from("users")
-      .select("*")
-      .eq("login", login)
-      .maybeSingle();
+    const { data: existing } =
+      payload.id
+        ? await supabase
+            .from("users")
+            .select("*")
+            .eq("id", payload.id)
+            .maybeSingle()
+        : await supabase
+            .from("users")
+            .select("*")
+            .eq("login", login)
+            .maybeSingle();
 
     if (existing) {
       const { error } =
@@ -139,7 +147,13 @@ export async function saveUser(
             login,
 
             password:
-              payload.password
+              payload.password,
+
+            is_admin:
+              payload.is_admin,
+
+            can_create_templates:
+              payload.can_create_templates
           })
           .eq(
             "id",
@@ -168,10 +182,10 @@ export async function saveUser(
               payload.password,
 
             is_admin:
-              false,
+              payload.is_admin,
 
             can_create_templates:
-              false
+              payload.can_create_templates
           });
 
       if (error) {
