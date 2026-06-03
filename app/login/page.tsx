@@ -15,8 +15,6 @@ import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
 
-import { findUser } from "@/lib/users-store";
-
 export default function LoginPage() {
   const [login, setLogin] =
     useState("");
@@ -44,20 +42,34 @@ export default function LoginPage() {
         "INICIANDO LOGIN..."
       );
 
-      const user =
-        await findUser(
-          login,
-          password
-        );
+      const response = await fetch(
+        "/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            login,
+            password
+          })
+        }
+      );
+
+      const result = (await response.json()) as {
+        user?: unknown;
+        error?: string;
+      };
 
       console.log(
         "RESULTADO LOGIN:",
-        user
+        result
       );
 
-      if (!user) {
+      if (!response.ok || !result.user) {
         setError(
-          "Login ou senha inválidos."
+          result.error ??
+            "Login ou senha inválidos."
         );
 
         setLoading(false);
@@ -67,23 +79,8 @@ export default function LoginPage() {
 
       localStorage.setItem(
         "cs_session_user",
-        JSON.stringify(user)
+        JSON.stringify(result.user)
       );
-
-      const sessionResponse = await fetch(
-        "/api/auth/local-user-login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(user)
-        }
-      );
-
-      if (!sessionResponse.ok) {
-        throw new Error("Nao foi possivel criar a sessao.");
-      }
 
       console.log(
         "LOGIN OK"
