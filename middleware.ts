@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { LOCAL_ADMIN } from "@/lib/admin-auth";
+import {
+  canAccessTemplates,
+  canAccessUsers,
+  parseLocalSession
+} from "@/lib/local-session";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -29,11 +34,13 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
   const localAdmin = request.cookies.get(LOCAL_ADMIN.cookieName)?.value === "true";
   const localUser = request.cookies.get(LOCAL_ADMIN.userCookieName)?.value === "true";
-  const userSession = Boolean(request.cookies.get("cs_user_session")?.value);
+  const session = parseLocalSession(request.cookies.get("cs_user_session")?.value);
+  const userSession = Boolean(session);
   const isSupabaseAdmin =
     user?.email === LOCAL_ADMIN.email || user?.user_metadata?.role === "admin";
   const isLocalUser = localUser || userSession;
-  const isAdmin = localAdmin || isSupabaseAdmin;
+  const isAdmin = localAdmin || isSupabaseAdmin || canAccessUsers(session);
+  const isTemplateUser = isAdmin || canAccessTemplates(session);
 
   const isLogin = request.nextUrl.pathname.startsWith("/login");
   const isProtected =
@@ -41,9 +48,8 @@ export async function middleware(request: NextRequest) {
     ["/dashboard", "/formatador", "/templates", "/aulas", "/gpts", "/alunos", "/usuarios"].some(
       (path) => request.nextUrl.pathname.startsWith(path)
     );
-  const isAdminOnly =
-    request.nextUrl.pathname.startsWith("/templates") ||
-    request.nextUrl.pathname.startsWith("/usuarios");
+  const isTemplates = request.nextUrl.pathname.startsWith("/templates");
+  const isUsers = request.nextUrl.pathname.startsWith("/usuarios");
 
   if (!user && !localAdmin && !isLocalUser && isProtected && !isLogin) {
     const url = request.nextUrl.clone();
@@ -51,7 +57,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isAdminOnly && !isAdmin) {
+  if (isTemplates && !isTemplateUser) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  if (isUsers && !isAdmin) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

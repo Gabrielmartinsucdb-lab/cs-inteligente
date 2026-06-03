@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { LOCAL_ADMIN } from "@/lib/admin-auth";
+import { canAccessUsers, parseLocalSession } from "@/lib/local-session";
 import { createClient } from "@/lib/supabase-server";
 import { UsuariosClient } from "./usuarios-client";
 
@@ -12,10 +13,11 @@ export default async function UsuariosPage() {
   } = await supabase.auth.getUser();
   const cookieStore = await cookies();
   const localAdmin = cookieStore.get(LOCAL_ADMIN.cookieName)?.value === "true";
+  const session = parseLocalSession(cookieStore.get("cs_user_session")?.value);
   const isSupabaseAdmin =
     user?.email === LOCAL_ADMIN.email || user?.user_metadata?.role === "admin";
 
-  if (!localAdmin && !isSupabaseAdmin) redirect("/dashboard");
+  if (!localAdmin && !isSupabaseAdmin && !canAccessUsers(session)) redirect("/dashboard");
 
   return (
     <DashboardShell>

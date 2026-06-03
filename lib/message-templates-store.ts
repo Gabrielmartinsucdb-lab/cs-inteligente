@@ -21,6 +21,23 @@ export type TemplateStoreResult<T> = {
 
 const localStorageKey = "cs_message_templates";
 
+async function requestTemplatesApi(
+  input: RequestInfo | URL,
+  init?: RequestInit
+) {
+  const response = await fetch(input, init);
+
+  if (!response.ok) {
+    throw new Error(
+      `Templates API ${response.status}`
+    );
+  }
+
+  return (await response.json()) as TemplateStoreResult<
+    MessageTemplate[]
+  >;
+}
+
 /**
  * =========================================
  * SUPABASE CONFIG
@@ -160,6 +177,21 @@ export async function listMessageTemplates(): Promise<
   TemplateStoreResult<MessageTemplate[]>
 > {
   try {
+    const result = await requestTemplatesApi(
+      "/api/templates"
+    );
+
+    writeLocalTemplates(result.data);
+
+    return result;
+  } catch (error) {
+    console.error(
+      "TEMPLATES API LIST FAILURE:",
+      error
+    );
+  }
+
+  try {
     if (!isSupabaseConfigured()) {
       throw new Error(
         "Supabase não configurado"
@@ -226,6 +258,41 @@ export async function saveMessageTemplate(
 ): Promise<
   TemplateStoreResult<MessageTemplate[]>
 > {
+  try {
+    const result = id
+      ? await requestTemplatesApi(
+          `/api/templates/${id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+            body: JSON.stringify(payload)
+          }
+        )
+      : await requestTemplatesApi(
+          "/api/templates",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+            body: JSON.stringify(payload)
+          }
+        );
+
+    writeLocalTemplates(result.data);
+
+    return result;
+  } catch (error) {
+    console.error(
+      "TEMPLATES API SAVE FAILURE:",
+      error
+    );
+  }
+
   try {
     if (!isSupabaseConfigured()) {
       throw new Error(
@@ -341,6 +408,24 @@ export async function deleteMessageTemplate(
 ): Promise<
   TemplateStoreResult<MessageTemplate[]>
 > {
+  try {
+    const result = await requestTemplatesApi(
+      `/api/templates/${id}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    writeLocalTemplates(result.data);
+
+    return result;
+  } catch (error) {
+    console.error(
+      "TEMPLATES API DELETE FAILURE:",
+      error
+    );
+  }
+
   try {
     if (!isSupabaseConfigured()) {
       throw new Error(

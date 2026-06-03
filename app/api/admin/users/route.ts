@@ -2,12 +2,14 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { LOCAL_ADMIN } from "@/lib/admin-auth";
+import { canAccessUsers, parseLocalSession } from "@/lib/local-session";
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const localAdmin = cookieStore.get(LOCAL_ADMIN.cookieName)?.value === "true";
+  const session = parseLocalSession(cookieStore.get("cs_user_session")?.value);
 
-  if (!localAdmin) {
+  if (!localAdmin && !canAccessUsers(session)) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
 
