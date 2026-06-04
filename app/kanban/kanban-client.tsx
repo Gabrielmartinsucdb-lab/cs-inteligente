@@ -1024,7 +1024,7 @@ export function KanbanClient() {
 
       {view === "board" ? (
         <section className="space-y-4">
-          <div className="grid gap-4 overflow-x-auto pb-2 xl:grid-cols-[repeat(7,minmax(250px,1fr))] 2xl:grid-cols-[repeat(7,minmax(270px,1fr))]">
+          <div className="grid gap-4 overflow-x-auto pb-2 xl:grid-cols-[repeat(7,minmax(270px,1fr))] 2xl:grid-cols-[repeat(7,minmax(290px,1fr))]">
             {boardCardsByColumn.map(({ column, cards: columnCards }) => (
               <div
                 key={column.id}
@@ -1043,7 +1043,7 @@ export function KanbanClient() {
                 >
                   <div className="min-w-0 flex-1 pr-2">
                     <div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-                      <span className="truncate whitespace-nowrap text-[13px] leading-none">
+                      <span className="min-w-0 truncate whitespace-nowrap text-[13px] leading-none">
                         {column.name}
                       </span>
                       <span className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
