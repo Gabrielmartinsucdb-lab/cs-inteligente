@@ -8,12 +8,13 @@ import {
 } from "react";
 import {
   CalendarCheck,
+  FileSpreadsheet,
   Download,
   Pencil,
   Trash2,
-  Upload,
   UserCheck,
-  UserX
+  UserX,
+  X
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,17 @@ type StudentApiResult = {
   data: Student[];
   source: "supabase" | "local";
 };
+
+type ImportTarget =
+  | "skip"
+  | "mentorship"
+  | "name"
+  | "phone"
+  | "email"
+  | "cs_responsible"
+  | "status";
+
+type ImportMapping = Record<string, ImportTarget>;
 
 const localStorageKey = "cs_students";
 
@@ -155,6 +167,152 @@ async function requestStudentsApi(
   return (await response.json()) as StudentApiResult;
 }
 
+function normalizeImportText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function makeUniqueHeaders(rawHeaders: string[]) {
+  const counts = new Map<string, number>();
+
+  return rawHeaders.map((header, index) => {
+    const base =
+      header.trim() || `Coluna ${index + 1}`;
+    const nextCount = (counts.get(base) ?? 0) + 1;
+    counts.set(base, nextCount);
+
+    return nextCount === 1
+      ? base
+      : `${base} (${nextCount})`;
+  });
+}
+
+function headerMatches(
+  header: string,
+  candidates: string[]
+) {
+  const normalizedHeader = normalizeImportText(
+    header
+  );
+
+  return candidates.some((candidate) =>
+    normalizedHeader.includes(
+      normalizeImportText(candidate)
+    )
+  );
+}
+
+function inferImportTarget(header: string) {
+  if (
+    headerMatches(header, [
+      "nome",
+      "aluno",
+      "student"
+    ])
+  ) {
+    return "name" as const;
+  }
+
+  if (
+    headerMatches(header, [
+      "mentoria",
+      "mentorship",
+      "turma",
+      "grupo"
+    ])
+  ) {
+    return "mentorship" as const;
+  }
+
+  if (
+    headerMatches(header, [
+      "telefone",
+      "celular",
+      "fone",
+      "phone",
+      "whatsapp"
+    ])
+  ) {
+    return "phone" as const;
+  }
+
+  if (
+    headerMatches(header, [
+      "email",
+      "e-mail",
+      "mail"
+    ])
+  ) {
+    return "email" as const;
+  }
+
+  if (
+    headerMatches(header, [
+      "cs responsavel",
+      "cs",
+      "responsavel",
+      "responsável",
+      "consultor",
+      "owner"
+    ])
+  ) {
+    return "cs_responsible" as const;
+  }
+
+  if (
+    headerMatches(header, [
+      "status",
+      "situacao",
+      "situação",
+      "estado"
+    ])
+  ) {
+    return "status" as const;
+  }
+
+  return "skip" as const;
+}
+
+function inferImportMapping(headers: string[]) {
+  return headers.reduce<ImportMapping>(
+    (acc, header) => {
+      acc[header] = inferImportTarget(header);
+      return acc;
+    },
+    {}
+  );
+}
+
+function parseImportedStatus(value: string) {
+  const normalized = normalizeImportText(value);
+
+  if (!normalized) return true;
+
+  if (
+    [
+      "nao responde o cs",
+      "nao responde",
+      "nao responder",
+      "inativo",
+      "inactive",
+      "false",
+      "0",
+      "nao",
+      "não"
+    ].some((term) =>
+      normalized.includes(normalizeImportText(term))
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function formatDate(date?: string | null) {
   if (!date) return "-";
 
@@ -215,6 +373,22 @@ export function AlunosClient() {
     useState("Todos");
   const [users, setUsers] =
     useState<User[]>([]);
+  const [importModalOpen, setImportModalOpen] =
+    useState(false);
+  const [importBusy, setImportBusy] =
+    useState(false);
+  const [importFile, setImportFile] =
+    useState<File | null>(null);
+  const [importFileName, setImportFileName] =
+    useState("");
+  const [importHeaders, setImportHeaders] =
+    useState<string[]>([]);
+  const [importPreviewRows, setImportPreviewRows] =
+    useState<string[][]>([]);
+  const [importMapping, setImportMapping] =
+    useState<ImportMapping>({});
+  const [importMessage, setImportMessage] =
+    useState("");
 
   const csOptions = useMemo(() => {
     const userCs = users
@@ -241,12 +415,228 @@ export function AlunosClient() {
     );
   }, [items, selectedMentorship]);
 
+  const importUsedCount = useMemo(
+    () =>
+      Object.values(importMapping).filter(
+        (value) => value !== "skip"
+      ).length,
+    [importMapping]
+  );
+
   function showMessage(next: string) {
     setMessage(next);
     window.setTimeout(
       () => setMessage(""),
       2600
     );
+  }
+
+  function closeImportModal() {
+    setImportModalOpen(false);
+    setImportBusy(false);
+    setImportFile(null);
+    setImportFileName("");
+    setImportHeaders([]);
+    setImportPreviewRows([]);
+    setImportMapping({});
+    setImportMessage("");
+  }
+
+  function openImportModal(
+    file: File,
+    headers: string[],
+    rows: string[][]
+  ) {
+    setImportFile(file);
+    setImportFileName(file.name);
+    setImportHeaders(headers);
+    setImportPreviewRows(rows);
+    setImportMapping(inferImportMapping(headers));
+    setImportMessage("");
+    setImportModalOpen(true);
+  }
+
+  async function loadImportPreview(file: File) {
+    const XLSX = await import("xlsx");
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer);
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const matrix = XLSX.utils.sheet_to_json<
+      Array<string | number | boolean>
+    >(worksheet, {
+      header: 1,
+      defval: ""
+    }) as Array<Array<string | number | boolean>>;
+
+    const rawHeaders = (matrix[0] ?? []).map((cell, index) =>
+      String(cell ?? "").trim() || `Coluna ${index + 1}`
+    );
+    const headers = makeUniqueHeaders(rawHeaders);
+    const rows = matrix.slice(1, 6).map((row) =>
+      headers.map((_, index) =>
+        String(row?.[index] ?? "").trim()
+      )
+    );
+
+    return {
+      headers,
+      rows
+    };
+  }
+
+  async function importStudentsFromFile(file: File) {
+    const XLSX = await import("xlsx");
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer);
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const matrix = XLSX.utils.sheet_to_json<
+      Array<string | number | boolean>
+    >(worksheet, {
+      header: 1,
+      defval: ""
+    }) as Array<Array<string | number | boolean>>;
+
+    const rawHeaders = (matrix[0] ?? []).map((cell, index) =>
+      String(cell ?? "").trim() || `Coluna ${index + 1}`
+    );
+    const headers = makeUniqueHeaders(rawHeaders);
+    const dataRows = matrix.slice(1);
+    const payload = dataRows
+      .map((row) => {
+        const values = headers.reduce<
+          Record<string, string>
+        >((acc, header, index) => {
+          acc[header] = String(row?.[index] ?? "").trim();
+          return acc;
+        }, {});
+
+        const mapped = {
+          mentorship: "",
+          name: "",
+          phone: "",
+          email: "",
+          cs_responsible: "",
+          status: ""
+        };
+
+        headers.forEach((header) => {
+          const target = importMapping[header] ?? "skip";
+          const value = values[header] ?? "";
+
+          if (target === "skip") return;
+
+          if (target === "status") {
+            mapped.status = value;
+            return;
+          }
+
+          mapped[target] = value;
+        });
+
+        return {
+          mentorship: normalizeMentorship(
+            mapped.mentorship
+          ),
+          name: mapped.name,
+          phone: mapped.phone,
+          email: mapped.email,
+          cs_responsible: mapped.cs_responsible,
+          is_active: parseImportedStatus(mapped.status)
+        };
+      })
+      .filter((row) => row.name);
+
+    let apiSucceeded = true;
+
+    for (const student of payload) {
+      try {
+        await requestStudentsApi(
+          "/api/students",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(student)
+          }
+        );
+      } catch {
+        apiSucceeded = false;
+      }
+    }
+
+    if (!apiSucceeded) {
+      const current = readLocalStudents();
+      const now = new Date().toISOString();
+      const imported = payload.map((student) =>
+        normalizeStudent({
+          ...student,
+          created_at: now,
+          updated_at: now
+        })
+      );
+      const next = sortStudents([
+        ...imported,
+        ...current
+      ]);
+
+      writeLocalStudents(next);
+      setItems(next);
+      setStoreSource("local");
+      showMessage(
+        "Planilha importada e salva localmente."
+      );
+      return;
+    }
+
+    await loadItems();
+    showMessage("Planilha importada.");
+  }
+
+  async function startImportFromFile(file: File) {
+    setImportBusy(true);
+
+    try {
+      const preview = await loadImportPreview(file);
+
+      if (!preview.headers.length) {
+        showMessage("Essa planilha não tem colunas legíveis.");
+        return;
+      }
+
+      openImportModal(file, preview.headers, preview.rows);
+    } catch {
+      showMessage("Não consegui ler essa planilha.");
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
+  async function confirmImport() {
+    if (!importFile) return;
+
+    if (
+      !Object.values(importMapping).includes("name")
+    ) {
+      setImportMessage(
+        "Mapeie pelo menos uma coluna como Nome."
+      );
+      return;
+    }
+
+    setImportBusy(true);
+    setImportMessage("");
+
+    try {
+      await importStudentsFromFile(importFile);
+      closeImportModal();
+    } catch {
+      setImportMessage(
+        "Não consegui importar essa planilha."
+      );
+    } finally {
+      setImportBusy(false);
+    }
   }
 
   async function loadItems() {
@@ -536,100 +926,6 @@ export function AlunosClient() {
     XLSX.writeFile(workbook, "alunos.xlsx");
   }
 
-  async function importXlsx(file: File) {
-    const XLSX = await import("xlsx");
-    const buffer =
-      await file.arrayBuffer();
-    const workbook = XLSX.read(buffer);
-    const worksheet =
-      workbook.Sheets[
-        workbook.SheetNames[0]
-      ];
-    const rows =
-      XLSX.utils.sheet_to_json<
-        Record<string, string | number>
-      >(worksheet);
-    const payload = rows
-      .map((row) => ({
-        mentorship: String(
-          normalizeMentorship(
-            String(
-              row.mentorship ??
-                row.mentoria ??
-                ""
-            )
-          )
-        ),
-        name: String(
-          row.name ?? row.nome ?? ""
-        ),
-        phone: String(
-          row.phone ??
-            row.telefone ??
-            ""
-        ),
-        email: String(row.email ?? ""),
-        cs_responsible: String(
-          row.cs_responsible ??
-            row.cs_responsavel ??
-            row.cs ??
-            ""
-        ),
-        is_active:
-          String(
-            row.status ?? ""
-          ).toUpperCase() !==
-          "NAO RESPONDE O CS"
-      }))
-      .filter((row) => row.name);
-
-    let apiSucceeded = true;
-
-    for (const student of payload) {
-      try {
-        await requestStudentsApi(
-          "/api/students",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-            body: JSON.stringify(student)
-          }
-        );
-      } catch {
-        apiSucceeded = false;
-      }
-    }
-
-    if (!apiSucceeded) {
-      const current = readLocalStudents();
-      const imported = payload.map((student) =>
-        normalizeStudent({
-          ...student,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-      );
-      const next = sortStudents([
-        ...imported,
-        ...current
-      ]);
-
-      writeLocalStudents(next);
-      setItems(next);
-      setStoreSource("local");
-      showMessage(
-        "Planilha importada e salva localmente."
-      );
-      return;
-    }
-
-    await loadItems();
-    showMessage("Planilha importada.");
-  }
-
   return (
     <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
       <Card>
@@ -841,8 +1137,9 @@ export function AlunosClient() {
             onClick={() =>
               fileRef.current?.click()
             }
+            disabled={importBusy}
           >
-            <Upload className="h-4 w-4" />
+            <FileSpreadsheet className="h-4 w-4" />
             Importar XLSX
           </Button>
 
@@ -854,7 +1151,7 @@ export function AlunosClient() {
             onChange={(event) => {
               const file =
                 event.target.files?.[0];
-              if (file) void importXlsx(file);
+              if (file) void startImportFromFile(file);
               event.target.value = "";
             }}
           />
@@ -1028,6 +1325,141 @@ export function AlunosClient() {
           </table>
         </div>
       </div>
+
+      {importModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-950">
+                  Mapear colunas da planilha
+                </h2>
+                <p className="text-sm text-slate-500">
+                  {importFileName
+                    ? `Arquivo: ${importFileName}`
+                    : "Escolha o destino de cada coluna antes de importar."}
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={closeImportModal}
+                aria-label="Fechar importação"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-slate-600">
+                  {importHeaders.length} colunas encontradas
+                  {" · "}
+                  {importUsedCount} mapeadas para o sistema
+                </p>
+                <p className="text-xs text-slate-500">
+                  A coluna Nome precisa estar mapeada para a importação funcionar.
+                </p>
+              </div>
+
+              <div className="overflow-hidden rounded-lg border">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-100 text-slate-600">
+                    <tr>
+                      <th className="p-3">Coluna da planilha</th>
+                      <th className="p-3">Exemplo</th>
+                      <th className="p-3">Destino no sistema</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {importHeaders.map((header, index) => {
+                      const sampleValues = importPreviewRows
+                        .map((row) => row[index] ?? "")
+                        .filter(Boolean)
+                        .slice(0, 3);
+
+                      return (
+                        <tr key={header} className="border-t align-top">
+                          <td className="p-3 font-medium text-slate-950">
+                            {header}
+                          </td>
+                          <td className="p-3 text-slate-600">
+                            {sampleValues.length
+                              ? sampleValues.join(" · ")
+                              : "-"}
+                          </td>
+                          <td className="p-3">
+                            <Select
+                              value={importMapping[header] ?? "skip"}
+                              onChange={(event) =>
+                                setImportMapping((current) => ({
+                                  ...current,
+                                  [header]:
+                                    event.target.value as ImportTarget
+                                }))
+                              }
+                            >
+                              <option value="skip">
+                                Ignorar
+                              </option>
+                              <option value="name">
+                                Nome
+                              </option>
+                              <option value="mentorship">
+                                Mentoria
+                              </option>
+                              <option value="phone">
+                                Telefone
+                              </option>
+                              <option value="email">
+                                E-mail
+                              </option>
+                              <option value="cs_responsible">
+                                CS responsável
+                              </option>
+                              <option value="status">
+                                Status do aluno
+                              </option>
+                            </Select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {importMessage ? (
+                <p className="mt-4 text-sm text-red-600">
+                  {importMessage}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-slate-50 px-5 py-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeImportModal}
+                disabled={importBusy}
+              >
+                Cancelar
+              </Button>
+
+              <Button
+                type="button"
+                onClick={confirmImport}
+                disabled={importBusy}
+              >
+                Importar alunos
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
