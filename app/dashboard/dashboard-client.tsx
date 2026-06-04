@@ -142,7 +142,7 @@ export function DashboardClient() {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">Total de alunos</p>
@@ -196,7 +196,7 @@ export function DashboardClient() {
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
             {studentsByMentorship.map((row, index) => (
-              <div key={row.mentorship} className="rounded-md border p-4">
+              <div key={row.mentorship} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <span
                     className="h-3 w-3 rounded-full"
@@ -213,7 +213,7 @@ export function DashboardClient() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Participação das mentorias</CardTitle>
           </CardHeader>
@@ -250,7 +250,7 @@ export function DashboardClient() {
           <CardContent>
             <div className="space-y-3">
               {topStudents.map((student, index) => (
-                <div key={student.id} className="grid grid-cols-[32px_1fr_80px] items-center gap-3 rounded-md border p-3">
+                <div key={student.id} className="grid grid-cols-[32px_1fr_80px] items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                   <span className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-sm font-semibold">
                     {index + 1}
                   </span>
@@ -275,7 +275,7 @@ export function DashboardClient() {
           <CardContent>
             <div className="space-y-3">
               {meetingsByCs.map((row) => (
-                <div key={row.cs} className="flex items-center justify-between rounded-md border p-3">
+                <div key={row.cs} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                   <span className="font-medium">{row.cs}</span>
                   <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-semibold text-white">
                     {row.count}
@@ -296,7 +296,7 @@ export function DashboardClient() {
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
           {lessonsByMentorship.map((row) => (
-            <div key={row.mentorship} className="rounded-md border p-4">
+            <div key={row.mentorship} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-slate-500" />
                 <p className="text-sm font-medium">{row.mentorship}</p>

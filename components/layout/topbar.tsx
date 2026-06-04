@@ -24,9 +24,9 @@ export function Topbar() {
   }
 
   return (
-    <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:px-8">
+    <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:px-8">
       <div>
-        <p className="text-base font-semibold text-slate-950">
+        <p className="text-lg font-semibold text-slate-950">
           Painel operacional
         </p>
 
@@ -41,6 +41,7 @@ export function Topbar() {
         variant="outline"
         size="sm"
         onClick={logout}
+        className="min-w-20"
       >
         <LogOut className="h-4 w-4" />
 

@@ -766,6 +766,7 @@ export function AlunosClient() {
                       ? "default"
                       : "outline"
                   }
+                  className="min-w-32"
                   onClick={() =>
                     setSelectedMentorship(
                       mentorship
