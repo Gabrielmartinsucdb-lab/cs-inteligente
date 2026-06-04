@@ -21,7 +21,7 @@ export async function DashboardShell({
     <div className="flex min-h-screen bg-[#f4f5f7]">
       <Sidebar isAdmin />
 
-      <div className="flex min-h-screen flex-1 flex-col lg:pl-20">
+      <div className="flex min-h-screen flex-1 flex-col">
         <Topbar />
 
         <main className={cn("flex-1 p-4 pb-24 lg:p-8", mainClassName)}>
