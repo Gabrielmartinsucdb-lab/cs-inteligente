@@ -36,6 +36,11 @@ export type KanbanCardPayload = {
   comments: { text: string }[];
 };
 
+export type KanbanMovePayload = {
+  column_id: string;
+  order_index?: number;
+};
+
 export type KanbanColumnPayload = {
   name: string;
   color: string;
@@ -192,6 +197,19 @@ function sorted(board: KanbanBoardData): KanbanBoardData {
   };
 }
 
+function normalizeCardsInColumn(
+  cards: KanbanCard[],
+  columnId: string
+) {
+  return cards
+    .filter((card) => card.column_id === columnId)
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((card, index) => ({
+      ...card,
+      order_index: index
+    }));
+}
+
 function withHistory(text: string) {
   return {
     id: crypto.randomUUID(),
@@ -291,6 +309,12 @@ export async function saveKanbanCard(
       author_name: actor.name,
       created_at: now
     }));
+    const insertOrderIndex = Math.max(
+      -1,
+      ...board.cards
+        .filter((card) => card.column_id === cleanPayload.column_id)
+        .map((card) => card.order_index)
+    ) + 1;
 
     const nextCards = id
       ? board.cards.map((card) => {
@@ -319,13 +343,6 @@ export async function saveKanbanCard(
             title: cleanPayload.title,
             description: cleanPayload.description,
             column_id: cleanPayload.column_id,
-            order_index:
-              Math.max(
-                0,
-                ...board.cards
-                  .filter((card) => card.column_id === cleanPayload.column_id)
-                  .map((card) => card.order_index)
-              ) + 1,
             responsible_id:
               cleanPayload.responsible_id || null,
             responsible_ids: [],
@@ -343,12 +360,100 @@ export async function saveKanbanCard(
             history: [withHistory(`${actor.name} criou um cartão.`)],
             is_archived: false,
             created_at: now,
-            updated_at: now
+            updated_at: now,
+            order_index: insertOrderIndex
           } satisfies KanbanCard,
           ...board.cards
         ];
 
-    const next = sorted({ ...board, cards: nextCards });
+    const normalized = normalizeCardsInColumn(
+      nextCards,
+      cleanPayload.column_id
+    );
+    const next = sorted({
+      ...board,
+      cards: nextCards.map((card) =>
+        card.column_id === cleanPayload.column_id
+          ? normalized.find((item) => item.id === card.id) ?? card
+          : card
+      )
+    });
+    writeLocalBoard(next);
+    return { data: { ...next, users: await readUsers() }, source: "local" };
+  }
+}
+
+export async function moveKanbanCard(
+  id: string,
+  columnId: string
+): Promise<KanbanBoardResult> {
+  return saveKanbanCard({ column_id: columnId }, id);
+}
+
+export async function reorderKanbanCard(
+  id: string,
+  columnId: string,
+  orderIndex: number
+): Promise<KanbanBoardResult> {
+  try {
+    return await requestBoard("/api/kanban", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        kind: "move",
+        id,
+        payload: {
+          column_id: columnId,
+          order_index: orderIndex
+        }
+      })
+    });
+  } catch {
+    const board = readLocalBoard();
+    const now = new Date().toISOString();
+    const current = board.cards.find((card) => card.id === id);
+
+    if (!current) {
+      return { data: { ...sorted(board), users: await readUsers() }, source: "local" };
+    }
+
+    const targetColumnCards = board.cards
+      .filter((card) => card.column_id === columnId && card.id !== id)
+      .sort((a, b) => a.order_index - b.order_index);
+
+    const clampedIndex = Math.max(
+      0,
+      Math.min(orderIndex, targetColumnCards.length)
+    );
+
+    const movedCard = {
+      ...current,
+      column_id: columnId,
+      order_index: clampedIndex,
+      updated_at: now,
+      history: [...current.history, withHistory("reordenou o cartão.")]
+    };
+
+    const nextCards = board.cards
+      .filter((card) => card.id !== id)
+      .map((card) =>
+        card.column_id === columnId && card.order_index >= clampedIndex
+          ? { ...card, order_index: card.order_index + 1 }
+          : card
+      );
+
+    nextCards.push(movedCard);
+
+    const normalizedColumn = normalizeCardsInColumn(nextCards, columnId);
+    const finalCards = nextCards.map((card) =>
+      card.column_id === columnId
+        ? normalizedColumn.find((item) => item.id === card.id) ?? card
+        : card
+    );
+
+    const next = sorted({ ...board, cards: finalCards });
     writeLocalBoard(next);
     return { data: { ...next, users: await readUsers() }, source: "local" };
   }
@@ -456,13 +561,6 @@ export async function deleteKanbanColumn(id: string): Promise<KanbanActionResult
     writeLocalBoard(next);
     return { data: { ...sorted(next), users: await readUsers() }, source: "local" };
   }
-}
-
-export async function moveKanbanCard(
-  id: string,
-  columnId: string
-): Promise<KanbanBoardResult> {
-  return saveKanbanCard({ column_id: columnId }, id);
 }
 
 export function buildCardTitle(card: Pick<KanbanCard, "title" | "priority">) {

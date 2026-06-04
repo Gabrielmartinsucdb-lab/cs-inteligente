@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowDown,
+  ArrowUp,
   CalendarDays,
   CheckCircle2,
   CirclePlus,
@@ -42,6 +44,7 @@ import {
   deleteKanbanColumn,
   listKanbanBoard,
   moveKanbanCard,
+  reorderKanbanCard,
   saveKanbanCard,
   saveKanbanColumn
 } from "@/lib/kanban-store";
@@ -274,6 +277,32 @@ function cardProgress(card: KanbanCard) {
   return total > 0 ? `${done}/${total}` : "0/0";
 }
 
+function checklistCompletionRate(card: KanbanCard) {
+  if (!card.checklist.length) return 0;
+
+  return (
+    card.checklist.filter((item) => item.completed).length /
+    card.checklist.length
+  );
+}
+
+function formatPercent(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "percent",
+    maximumFractionDigits: 0
+  }).format(value);
+}
+
+function formatDateRange(
+  start?: string | null,
+  end?: string | null
+) {
+  if (!start && !end) return "Sem período";
+  if (start && end) return `${formatDate(start)} - ${formatDate(end)}`;
+  if (start) return `Início em ${formatDate(start)}`;
+  return `Entrega em ${formatDate(end)}`;
+}
+
 function columnColor(column: KanbanColumn) {
   return column.color || "#334155";
 }
@@ -429,6 +458,70 @@ export function KanbanClient() {
     }));
   }, [cards, columns]);
 
+  const dashboard = useMemo(() => {
+    const now = new Date();
+    const inSevenDays = new Date();
+    inSevenDays.setDate(now.getDate() + 7);
+    const doneColumnIds = columns
+      .filter((column) => column.name === "Concluído")
+      .map((column) => column.id);
+
+    const cardsWithDueDate = cards.filter((card) => card.due_date);
+    const cardsWithoutResponsible = cards.filter(
+      (card) => !card.responsible_id
+    );
+    const cardsDueSoon = cards.filter((card) => {
+      if (!card.due_date || isOverdue(card)) return false;
+      const due = new Date(card.due_date);
+      due.setHours(0, 0, 0, 0);
+      return due >= now && due <= inSevenDays;
+    });
+
+    const priorityCounts = priorityOptions.map((option) => ({
+      ...option,
+      count: cards.filter((card) => card.priority === option.value).length
+    }));
+
+    const labelCounts = labels
+      .map((label) => ({
+        label,
+        count: cards.filter((card) => card.labels.includes(label)).length
+      }))
+      .filter((item) => item.count > 0)
+      .slice(0, 5);
+
+    const checklistAverage =
+      cards.reduce((sum, card) => sum + checklistCompletionRate(card), 0) /
+      Math.max(1, cards.length);
+
+    const responsibleCounts = board.users
+      .map((user) => ({
+        ...user,
+        count: cards.filter((card) => card.responsible_id === user.id).length
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    const statusCounts = columns.map((column) => ({
+      column,
+      count: cards.filter((card) => card.column_id === column.id).length
+    }));
+
+    return {
+      completionRate: cards.length
+        ? cards.filter((card) => doneColumnIds.includes(card.column_id)).length /
+          cards.length
+        : 0,
+      checklistAverage,
+      dueSoonCount: cardsDueSoon.length,
+      withoutResponsibleCount: cardsWithoutResponsible.length,
+      withDueDateCount: cardsWithDueDate.length,
+      priorityCounts,
+      labelCounts,
+      responsibleCounts,
+      statusCounts
+    };
+  }, [board.users, cards, columns, labels]);
+
   function openCreate(columnId?: string) {
     const nextColumn = columnId || columns[0]?.id || "";
     setEditingCardId(null);
@@ -578,6 +671,21 @@ export function KanbanClient() {
   async function moveCard(id: string, columnId: string) {
     setSaving(true);
     const result = await moveKanbanCard(id, columnId);
+    setBoard(result.data);
+    setSource(result.source);
+    setSaving(false);
+  }
+
+  async function moveCardWithinColumn(
+    card: KanbanCard,
+    targetIndex: number
+  ) {
+    setSaving(true);
+    const result = await reorderKanbanCard(
+      card.id,
+      card.column_id,
+      targetIndex
+    );
     setBoard(result.data);
     setSource(result.source);
     setSaving(false);
@@ -890,7 +998,7 @@ export function KanbanClient() {
                     </div>
                   ) : null}
 
-                  {columnCards.map((card) => {
+                  {columnCards.map((card, index) => {
                     const responsible = card.responsible_id ? userMap.get(card.responsible_id) : null;
                     const { done, total } = checklistProgress(card);
 
@@ -946,6 +1054,32 @@ export function KanbanClient() {
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9"
+                              disabled={index === 0}
+                              onClick={() =>
+                                void moveCardWithinColumn(card, index - 1)
+                              }
+                              aria-label="Mover para cima"
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9"
+                              disabled={index === columnCards.length - 1}
+                              onClick={() =>
+                                void moveCardWithinColumn(card, index + 1)
+                              }
+                              aria-label="Mover para baixo"
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                          </div>
                           <Button variant="outline" size="sm" onClick={() => duplicateCard(card)}>
                             <Copy className="h-4 w-4" />
                             Duplicar
@@ -1282,54 +1416,111 @@ export function KanbanClient() {
               <CardContent>
                 <p className="text-sm text-slate-500">Total de tarefas</p>
                 <p className="mt-2 text-3xl font-semibold text-slate-950">{metrics.total}</p>
+                <p className="mt-2 text-xs text-slate-500">Base geral do quadro.</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent>
-                <p className="text-sm text-slate-500">Tarefas concluídas</p>
-                <p className="mt-2 text-3xl font-semibold text-slate-950">{metrics.done}</p>
+                <p className="text-sm text-slate-500">Concluídas</p>
+                <p className="mt-2 text-3xl font-semibold text-emerald-600">{metrics.done}</p>
+                <p className="mt-2 text-xs text-slate-500">{formatPercent(dashboard.completionRate)} do total</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent>
                 <p className="text-sm text-slate-500">Vencidas</p>
                 <p className="mt-2 text-3xl font-semibold text-red-600">{metrics.overdue}</p>
+                <p className="mt-2 text-xs text-slate-500">Itens que precisam de atenção.</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent>
                 <p className="text-sm text-slate-500">Urgentes</p>
                 <p className="mt-2 text-3xl font-semibold text-amber-600">{metrics.urgent}</p>
+                <p className="mt-2 text-xs text-slate-500">{dashboard.dueSoonCount} vencem nos próximos 7 dias</p>
               </CardContent>
             </Card>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1.3fr_0.9fr]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fluxo por coluna</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {columnStats.map(({ column, count }) => {
+                  const percent = metrics.total ? count / metrics.total : 0;
+                  return (
+                    <div key={column.id} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-slate-700">{column.name}</span>
+                        <span className="text-slate-500">{count} {formatPercent(percent)}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100">
+                        <div className="h-2 rounded-full" style={{ width: `${percent * 100}%`, backgroundColor: columnColor(column) }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Prioridade e pauta</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {dashboard.priorityCounts.map((item) => {
+                    const percent = metrics.total ? item.count / metrics.total : 0;
+                    return (
+                      <div key={item.value} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium text-slate-700">{item.label}</span>
+                          <span className="text-slate-500">{item.count}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-slate-100">
+                          <div className="h-2 rounded-full bg-slate-950" style={{ width: `${percent * 100}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Capacidade</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Sem responsável</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-950">{dashboard.withoutResponsibleCount}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Com prazo</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-950">{dashboard.withDueDateCount}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Checklist médio</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-950">{formatPercent(dashboard.checklistAverage)}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Responsáveis ativos</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-950">{dashboard.responsibleCounts.filter((item) => item.count > 0).length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Tarefas por coluna</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {columnStats.map(({ column, count }) => (
-                  <div key={column.id} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{column.name}</span>
-                      <span className="text-slate-500">{count}</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100">
-                      <div className="h-2 rounded-full" style={{ width: `${metrics.total ? (count / metrics.total) * 100 : 0}%`, backgroundColor: columnColor(column) }} />
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
                 <CardTitle>Tarefas por responsável</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {topUsers.map((user) => (
+                {dashboard.responsibleCounts.slice(0, 8).map((user) => (
                   <div key={user.id} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-slate-700">{user.name}</span>
@@ -1342,6 +1533,31 @@ export function KanbanClient() {
                 ))}
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Etiquetas em destaque</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {dashboard.labelCounts.length === 0 ? (
+                  <p className="text-sm text-slate-500">Nenhuma etiqueta com volume suficiente.</p>
+                ) : null}
+                {dashboard.labelCounts.map((item) => {
+                  const percent = metrics.total ? item.count / metrics.total : 0;
+                  return (
+                    <div key={item.label} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-slate-700">{item.label}</span>
+                        <span className="text-slate-500">{item.count}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100">
+                        <div className="h-2 rounded-full bg-emerald-600" style={{ width: `${percent * 100}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
           </div>
         </section>
       ) : null}
@@ -1351,6 +1567,25 @@ export function KanbanClient() {
           <div>
             <h2 className="text-base font-semibold text-slate-950">Timeline</h2>
             <p className="text-sm text-slate-500">Tarefas com início e entrega aparecem posicionadas no período.</p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Com período</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{timelineCards.length}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Sem prazo</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{cards.filter((card) => !card.due_date).length}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Hoje</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{cards.filter((card) => toInputDate(card.due_date) === new Date().toISOString().slice(0, 10)).length}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Vencidas</p>
+              <p className="mt-2 text-2xl font-semibold text-red-600">{metrics.overdue}</p>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -1367,29 +1602,53 @@ export function KanbanClient() {
               const span = Math.max(1, timelineRange.end - timelineRange.start);
               const left = ((start - timelineRange.start) / span) * 100;
               const width = Math.max(8, ((end - start) / span) * 100);
+              const responsible = card.responsible_id ? userMap.get(card.responsible_id) : "Sem responsável";
+              const checklistRate = formatPercent(checklistCompletionRate(card));
+              const overdue = isOverdue(card);
 
               return (
-                <div key={card.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <button type="button" onClick={() => openEdit(card)} className="text-left">
-                      <p className="font-semibold text-slate-950">{card.title}</p>
-                      <p className="text-xs text-slate-500">{formatDate(card.start_date)} - {formatDate(card.due_date)}</p>
-                    </button>
-                    <span className="rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white">
-                      {formatKanbanPriority(card.priority)}
-                    </span>
+                <div key={card.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <button type="button" onClick={() => openEdit(card)} className="text-left">
+                        <p className="font-semibold text-slate-950">{card.title}</p>
+                      </button>
+                      <p className="text-xs text-slate-500">{formatDateRange(card.start_date, card.due_date)}</p>
+                      <p className="text-xs text-slate-500">{responsible}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white">
+                        {formatKanbanPriority(card.priority)}
+                      </span>
+                      {overdue ? (
+                        <span className="rounded-full bg-red-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-red-700">
+                          Vencida
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
 
-                  <div className="mt-3 h-3 rounded-full bg-white">
+                  <div className="mt-4 h-3 rounded-full bg-white">
                     <div className="relative h-3 rounded-full bg-slate-100">
                       <div
-                        className="absolute top-0 h-3 rounded-full bg-slate-950"
+                        className={cn(
+                          "absolute top-0 h-3 rounded-full",
+                          overdue ? "bg-red-600" : "bg-slate-950"
+                        )}
                         style={{
                           left: `${left}%`,
                           width: `${width}%`
                         }}
                       />
                     </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span>{cardProgress(card)} checklist</span>
+                    <span>•</span>
+                    <span>{card.labels.slice(0, 2).join(", ") || "Sem etiquetas"}</span>
+                    <span>•</span>
+                    <span>{checklistRate} concluído</span>
                   </div>
                 </div>
               );

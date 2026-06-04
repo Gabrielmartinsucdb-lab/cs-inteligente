@@ -215,7 +215,7 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as {
-    kind?: "card" | "column";
+    kind?: "card" | "column" | "move";
     id?: string;
     payload?: Record<string, unknown>;
   };
@@ -401,6 +401,114 @@ export async function POST(request: Request) {
     }
 
     const data = await loadBoard(supabase);
+    return NextResponse.json({ data, source: "supabase" });
+  }
+
+  if (body.kind === "move") {
+    const targetColumnId = String(body.payload?.column_id ?? "").trim();
+    const targetOrderIndex = Number(body.payload?.order_index ?? 0);
+
+    if (!body.id || !targetColumnId) {
+      return NextResponse.json(
+        { error: "Item e coluna sao obrigatorios" },
+        { status: 400 }
+      );
+    }
+
+    const { data: currentCard, error: readError } = await supabase
+      .from("kanban_cards")
+      .select("*")
+      .eq("id", body.id)
+      .maybeSingle();
+
+    if (readError) {
+      return NextResponse.json(
+        { error: readError.message },
+        { status: 400 }
+      );
+    }
+
+    if (!currentCard) {
+      return NextResponse.json(
+        { error: "Tarefa nao encontrada" },
+        { status: 404 }
+      );
+    }
+
+    const { data: cardsInColumn, error: cardsError } = await supabase
+      .from("kanban_cards")
+      .select("id,order_index")
+      .eq("column_id", targetColumnId)
+      .neq("id", body.id)
+      .order("order_index", { ascending: true });
+
+    if (cardsError) {
+      return NextResponse.json(
+        { error: cardsError.message },
+        { status: 400 }
+      );
+    }
+
+    const nextIndex = Math.max(
+      0,
+      Math.min(targetOrderIndex, cardsInColumn?.length ?? 0)
+    );
+    const nextCards = [...(cardsInColumn ?? [])];
+    nextCards.splice(nextIndex, 0, {
+      id: currentCard.id,
+      order_index: nextIndex
+    } as { id: string; order_index: number });
+
+    const updates = nextCards.map((card, index) =>
+      supabase
+        .from("kanban_cards")
+        .update({
+          column_id: targetColumnId,
+          order_index: index,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", card.id)
+    );
+
+    const results = await Promise.all(updates);
+    const firstError = results.find((result) => result.error)?.error;
+
+    if (firstError) {
+      return NextResponse.json(
+        { error: firstError.message },
+        { status: 400 }
+      );
+    }
+
+    const { error: movedError } = await supabase
+      .from("kanban_cards")
+      .update({
+        column_id: targetColumnId,
+        order_index: nextIndex,
+        updated_at: new Date().toISOString(),
+        history: [
+          ...(Array.isArray(currentCard.history)
+            ? currentCard.history
+            : []),
+          ...buildHistory("reordenou uma tarefa.", actor.name)
+        ]
+      })
+      .eq("id", body.id);
+
+    if (movedError) {
+      return NextResponse.json(
+        { error: movedError.message },
+        { status: 400 }
+      );
+    }
+
+    const data = await loadBoard(supabase);
+    const actorUser = getActorUser(actor);
+
+    if (actorUser && !data.users.some((user) => user.id === actorUser.id)) {
+      data.users = [actorUser, ...data.users];
+    }
+
     return NextResponse.json({ data, source: "supabase" });
   }
 
