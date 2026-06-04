@@ -42,7 +42,8 @@ import {
   deleteKanbanColumn,
   listKanbanBoard,
   moveKanbanCard,
-  saveKanbanCard
+  saveKanbanCard,
+  saveKanbanColumn
 } from "@/lib/kanban-store";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,13 @@ type DraftCard = {
   checklist: ChecklistDraft[];
   comments: { text: string; created_at?: string }[];
   newComment: string;
+};
+
+type DraftColumn = {
+  name: string;
+  color: string;
+  order_index: number;
+  is_archived: boolean;
 };
 
 type CurrentUser = {
@@ -207,6 +215,15 @@ function defaultCustomFields() {
   }, {});
 }
 
+function emptyColumnDraft(orderIndex = 0): DraftColumn {
+  return {
+    name: "",
+    color: "#334155",
+    order_index: orderIndex,
+    is_archived: false
+  };
+}
+
 function draftFromCard(card: KanbanCard): DraftCard {
   return {
     title: card.title,
@@ -291,10 +308,14 @@ export function KanbanClient() {
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [columnEditorOpen, setColumnEditorOpen] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftCard>(emptyDraft(""));
+  const [columnDraft, setColumnDraft] = useState<DraftColumn>(emptyColumnDraft());
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   const [calendarDate, setCalendarDate] = useState(() => new Date());
+  const [columnMessage, setColumnMessage] = useState("");
 
   async function loadBoard() {
     setLoading(true);
@@ -427,6 +448,77 @@ export function KanbanClient() {
     setDraft(emptyDraft(columns[0]?.id || ""));
   }
 
+  function openColumnEditor() {
+    setColumnEditorOpen(true);
+    setColumnMessage("");
+  }
+
+  function closeColumnEditor() {
+    setColumnEditorOpen(false);
+    setEditingColumnId(null);
+    setColumnDraft(emptyColumnDraft(columns.length));
+  }
+
+  function editColumn(column: KanbanColumn) {
+    setEditingColumnId(column.id);
+    setColumnDraft({
+      name: column.name,
+      color: column.color || "#334155",
+      order_index: column.order_index,
+      is_archived: column.is_archived
+    });
+    setColumnMessage("");
+  }
+
+  function createColumnDraft() {
+    setEditingColumnId(null);
+    setColumnDraft(emptyColumnDraft(columns.length));
+    setColumnMessage("");
+  }
+
+  async function persistColumn() {
+    if (!columnDraft.name.trim()) {
+      setColumnMessage("O nome da coluna é obrigatório.");
+      return;
+    }
+
+    setSaving(true);
+    const result = await saveKanbanColumn(
+      {
+        name: columnDraft.name.trim(),
+        color: columnDraft.color.trim(),
+        order_index: columnDraft.order_index,
+        is_archived: columnDraft.is_archived
+      },
+      editingColumnId
+    );
+
+    setBoard(result.data);
+    setSource(result.source);
+    setColumnMessage(
+      editingColumnId ? "Coluna atualizada." : "Coluna criada."
+    );
+    setSaving(false);
+    setEditingColumnId(null);
+    setColumnDraft(emptyColumnDraft(result.data.columns.length));
+  }
+
+  async function removeColumnDraft(columnId: string) {
+    const confirmed = window.confirm("Excluir esta coluna? Ela precisa estar vazia.");
+    if (!confirmed) return;
+
+    setSaving(true);
+    const result = await deleteKanbanColumn(columnId);
+    setBoard(result.data);
+    setSource(result.source);
+    setSaving(false);
+    setColumnMessage(result.error || "Coluna removida.");
+    if (editingColumnId === columnId) {
+      setEditingColumnId(null);
+      setColumnDraft(emptyColumnDraft(result.data.columns.length));
+    }
+  }
+
   async function persistCard() {
     if (!draft.title.trim()) {
       setMessage("O título da tarefa é obrigatório.");
@@ -480,7 +572,7 @@ export function KanbanClient() {
     setBoard(result.data);
     setSource(result.source);
     setSaving(false);
-    setMessage("Coluna atualizada.");
+    setMessage(result.error || "Coluna atualizada.");
   }
 
   async function moveCard(id: string, columnId: string) {
@@ -525,10 +617,6 @@ export function KanbanClient() {
     if (!draggingCardId) return;
     void moveCard(draggingCardId, columnId);
     setDraggingCardId(null);
-  }
-
-  function selectedCard() {
-    return board.cards.find((card) => card.id === editingCardId) || null;
   }
 
   function addChecklistItem() {
@@ -639,6 +727,10 @@ export function KanbanClient() {
             <Button type="button" variant="outline" onClick={() => void loadBoard()}>
               <RefreshCcw className="h-4 w-4" />
               Atualizar
+            </Button>
+            <Button type="button" variant="outline" onClick={openColumnEditor}>
+              <Pencil className="h-4 w-4" />
+              Colunas
             </Button>
             <Button type="button" onClick={() => openCreate()}>
               <CirclePlus className="h-4 w-4" />
@@ -752,7 +844,12 @@ export function KanbanClient() {
             {boardCardsByColumn.map(({ column, cards: columnCards }) => (
               <div
                 key={column.id}
-                className="flex min-h-[520px] flex-col rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
+                className={cn(
+                  "flex min-h-[520px] flex-col rounded-2xl border p-3",
+                  column.is_archived
+                    ? "border-slate-300 bg-slate-100/80 opacity-85"
+                    : "border-slate-200 bg-slate-50/80"
+                )}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => onDropCard(column.id)}
               >
@@ -766,6 +863,11 @@ export function KanbanClient() {
                       <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
                         {columnCards.length}
                       </span>
+                      {column.is_archived ? (
+                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                          Arquivada
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-1 text-xs text-white/75">Arraste tarefas para mover entre etapas.</p>
                   </div>
@@ -988,6 +1090,189 @@ export function KanbanClient() {
             </div>
           </div>
         </section>
+      ) : null}
+
+      {columnEditorOpen ? (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-950/60 p-4">
+          <div className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.35)]">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-950">Editor de colunas</h2>
+                <p className="text-sm text-slate-500">Crie, renomeie e arquive colunas sem mexer nas tarefas.</p>
+              </div>
+              <Button type="button" variant="ghost" size="icon" onClick={closeColumnEditor}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="grid flex-1 gap-0 lg:grid-cols-[1.3fr_0.9fr]">
+              <div className="border-b border-slate-200 p-5 lg:border-b-0 lg:border-r">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-950">Colunas existentes</h3>
+                    <p className="text-xs text-slate-500">Clique em editar para ajustar nome, cor e status.</p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={createColumnDraft}>
+                    <Plus className="h-4 w-4" />
+                    Nova
+                  </Button>
+                </div>
+
+                {columnMessage ? (
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    {columnMessage}
+                  </div>
+                ) : null}
+
+                <div className="mt-4 space-y-3">
+                  {columns.map((column) => (
+                    <div
+                      key={column.id}
+                      className={cn(
+                        "rounded-xl border p-4",
+                        editingColumnId === column.id
+                          ? "border-slate-950 bg-slate-50"
+                          : "border-slate-200 bg-white"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className="h-3 w-3 rounded-full border border-slate-200"
+                              style={{ backgroundColor: column.color || "#334155" }}
+                            />
+                            <h4 className="truncate text-sm font-semibold text-slate-950">
+                              {column.name}
+                            </h4>
+                            {column.is_archived ? (
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                                Arquivada
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {board.cards.filter((card) => card.column_id === column.id).length} tarefa(s)
+                          </p>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button type="button" size="icon" variant="outline" onClick={() => editColumn(column)} aria-label="Editar coluna">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            onClick={() => void removeColumnDraft(column.id)}
+                            aria-label="Excluir coluna"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-5">
+                <h3 className="text-sm font-semibold text-slate-950">
+                  {editingColumnId ? "Editar coluna" : "Nova coluna"}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Alterações são salvas no banco e aparecem para toda a equipe.
+                </p>
+
+                <div className="mt-4 space-y-4">
+                  <div className="space-y-2">
+                    <Label>Nome</Label>
+                    <Input
+                      value={columnDraft.name}
+                      onChange={(e) =>
+                        setColumnDraft((current) => ({
+                          ...current,
+                          name: e.target.value
+                        }))
+                      }
+                      placeholder="Ex: Em análise"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Cor</Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="color"
+                        className="h-11 w-16 p-1"
+                        value={columnDraft.color}
+                        onChange={(e) =>
+                          setColumnDraft((current) => ({
+                            ...current,
+                            color: e.target.value
+                          }))
+                        }
+                      />
+                      <Input
+                        value={columnDraft.color}
+                        onChange={(e) =>
+                          setColumnDraft((current) => ({
+                            ...current,
+                            color: e.target.value
+                          }))
+                        }
+                        placeholder="#334155"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Ordem</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={columnDraft.order_index}
+                      onChange={(e) =>
+                        setColumnDraft((current) => ({
+                          ...current,
+                          order_index: Number(e.target.value)
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={columnDraft.is_archived}
+                      onChange={(e) =>
+                        setColumnDraft((current) => ({
+                          ...current,
+                          is_archived: e.target.checked
+                        }))
+                      }
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-slate-950">Arquivar coluna</span>
+                      <span className="block text-xs text-slate-500">
+                        Mantém a coluna no sistema, mas sinalizada como arquivada.
+                      </span>
+                    </span>
+                  </label>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <Button type="button" onClick={() => void persistColumn()} disabled={saving}>
+                      {saving ? "Salvando..." : editingColumnId ? "Salvar alterações" : "Criar coluna"}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={closeColumnEditor}>
+                      Fechar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {view === "dashboard" ? (

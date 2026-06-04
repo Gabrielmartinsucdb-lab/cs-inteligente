@@ -17,6 +17,10 @@ export type KanbanBoardResult = {
   source: "supabase" | "local";
 };
 
+export type KanbanActionResult = KanbanBoardResult & {
+  error?: string;
+};
+
 export type KanbanCardPayload = {
   title: string;
   description: string;
@@ -323,7 +327,7 @@ export async function saveKanbanCard(
   }
 }
 
-export async function deleteKanbanCard(id: string): Promise<KanbanBoardResult> {
+export async function deleteKanbanCard(id: string): Promise<KanbanActionResult> {
   try {
     return await requestBoard("/api/kanban", {
       method: "DELETE",
@@ -398,7 +402,7 @@ export async function saveKanbanColumn(
   }
 }
 
-export async function deleteKanbanColumn(id: string): Promise<KanbanBoardResult> {
+export async function deleteKanbanColumn(id: string): Promise<KanbanActionResult> {
   try {
     return await requestBoard("/api/kanban", {
       method: "DELETE",
@@ -411,7 +415,11 @@ export async function deleteKanbanColumn(id: string): Promise<KanbanBoardResult>
     const board = readLocalBoard();
     const hasCards = board.cards.some((card) => card.column_id === id);
     if (hasCards) {
-      return { data: { ...sorted(board), users: await readUsers() }, source: "local" };
+      return {
+        data: { ...sorted(board), users: await readUsers() },
+        source: "local",
+        error: "Mova ou remova as tarefas antes de excluir a coluna."
+      };
     }
 
     const next = {
