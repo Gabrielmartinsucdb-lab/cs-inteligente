@@ -14,6 +14,8 @@ type StudentPayload = {
   is_active?: boolean;
 };
 
+type StudentBulkPayload = StudentPayload | StudentPayload[];
+
 function getSupabaseAdmin() {
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -106,16 +108,6 @@ export async function POST(request: Request) {
   }
 
   const supabase = getSupabaseAdmin();
-  const payload = normalizePayload(
-    (await request.json()) as StudentPayload
-  );
-
-  if (!payload.name) {
-    return NextResponse.json(
-      { error: "Nome e obrigatorio" },
-      { status: 400 }
-    );
-  }
 
   if (!supabase) {
     return NextResponse.json(
@@ -124,12 +116,32 @@ export async function POST(request: Request) {
     );
   }
 
+  const body =
+    (await request.json()) as StudentBulkPayload;
+  const payloads = Array.isArray(body)
+    ? body
+    : [body];
+
+  const rows = payloads
+    .map((payload) => normalizePayload(payload))
+    .filter((payload) => payload.name);
+
+  if (!rows.length) {
+    return NextResponse.json(
+      { error: "Nome e obrigatorio" },
+      { status: 400 }
+    );
+  }
+
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from("students")
-    .insert({
-      ...payload,
-      updated_at: new Date().toISOString()
-    });
+    .insert(
+      rows.map((payload) => ({
+        ...payload,
+        updated_at: now
+      }))
+    );
 
   if (error) {
     return NextResponse.json(

@@ -546,51 +546,16 @@ export function AlunosClient() {
       })
       .filter((row) => row.name);
 
-    let apiSucceeded = true;
-
-    for (const student of payload) {
-      try {
-        await requestStudentsApi(
-          "/api/students",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(student)
-          }
-        );
-      } catch {
-        apiSucceeded = false;
-      }
-    }
-
-    if (!apiSucceeded) {
-      const current = readLocalStudents();
-      const now = new Date().toISOString();
-      const imported = payload.map((student) =>
-        normalizeStudent({
-          ...student,
-          created_at: now,
-          updated_at: now
-        })
-      );
-      const next = sortStudents([
-        ...imported,
-        ...current
-      ]);
-
-      writeLocalStudents(next);
-      setItems(next);
-      setStoreSource("local");
-      showMessage(
-        "Planilha importada e salva localmente."
-      );
-      return;
-    }
+    await requestStudentsApi("/api/students", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
 
     await loadItems();
-    showMessage("Planilha importada.");
+    showMessage("Planilha importada e salva no banco.");
   }
 
   async function startImportFromFile(file: File) {
