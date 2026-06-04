@@ -311,6 +311,21 @@ function statusLabel(card: KanbanCard) {
   return card.is_archived ? "Arquivado" : "Ativo";
 }
 
+const kanbanRootClass =
+  "relative isolate overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(139,92,246,0.10),transparent_24%),linear-gradient(180deg,#0a1020_0%,#05070b_100%)] p-4 text-slate-100 shadow-[0_40px_120px_rgba(2,6,23,0.55)]";
+
+const kanbanSurfaceClass =
+  "rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_24px_80px_rgba(2,6,23,0.38)]";
+
+const kanbanCardClass =
+  "rounded-[22px] border border-white/10 bg-slate-950/55 text-slate-100 shadow-[0_18px_45px_rgba(2,6,23,0.30)] backdrop-blur-xl";
+
+const kanbanMutedCardClass =
+  "rounded-2xl border border-white/10 bg-white/5 text-slate-100 backdrop-blur-xl";
+
+const kanbanFieldScopeClass =
+  "[&_input]:border-white/10 [&_input]:bg-white/5 [&_input]:text-slate-50 [&_input::placeholder]:text-slate-500 [&_input:focus]:border-cyan-400/50 [&_input:focus]:ring-cyan-400/20 [&_select]:border-white/10 [&_select]:bg-white/5 [&_select]:text-slate-50 [&_select:focus]:border-cyan-400/50 [&_select:focus]:ring-cyan-400/20 [&_textarea]:border-white/10 [&_textarea]:bg-white/5 [&_textarea]:text-slate-50 [&_textarea::placeholder]:text-slate-500 [&_textarea:focus]:border-cyan-400/50 [&_textarea:focus]:ring-cyan-400/20 [&_label]:text-slate-300";
+
 export function KanbanClient() {
   const [board, setBoard] = useState<KanbanBoardData>({
     columns: [],
@@ -808,8 +823,10 @@ export function KanbanClient() {
   }, [timelineCards]);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
+    <div className={cn(kanbanRootClass, kanbanFieldScopeClass)}>
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:64px_64px] opacity-30" />
+      <div className="relative z-10 space-y-6">
+      <section className={cn(kanbanSurfaceClass, "p-4")}>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             {viewItems.map((item) => {
@@ -821,7 +838,12 @@ export function KanbanClient() {
                   key={item.value}
                   type="button"
                   variant={active ? "default" : "outline"}
-                  className="min-w-28"
+                  className={cn(
+                    "min-w-28 rounded-full px-4",
+                    active
+                      ? "border-cyan-400/30 bg-cyan-400/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_14px_28px_rgba(34,211,238,0.12)] hover:bg-cyan-400/20"
+                      : "border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
+                  )}
                   onClick={() => setView(item.value)}
                 >
                   <Icon className="h-4 w-4" />
@@ -832,15 +854,29 @@ export function KanbanClient() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" onClick={() => void loadBoard()}>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
+              onClick={() => void loadBoard()}
+            >
               <RefreshCcw className="h-4 w-4" />
               Atualizar
             </Button>
-            <Button type="button" variant="outline" onClick={openColumnEditor}>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
+              onClick={openColumnEditor}
+            >
               <Pencil className="h-4 w-4" />
               Colunas
             </Button>
-            <Button type="button" onClick={() => openCreate()}>
+            <Button
+              type="button"
+              className="rounded-full bg-cyan-500/85 text-slate-950 shadow-[0_16px_35px_rgba(34,211,238,0.25)] hover:bg-cyan-400"
+              onClick={() => openCreate()}
+            >
               <CirclePlus className="h-4 w-4" />
               Nova tarefa
             </Button>
@@ -849,7 +885,7 @@ export function KanbanClient() {
 
         <div className="mt-4 grid gap-3 xl:grid-cols-6">
           <div className="xl:col-span-2">
-            <Label>Busca</Label>
+            <Label className="text-slate-300">Busca</Label>
             <div className="relative mt-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -862,7 +898,7 @@ export function KanbanClient() {
           </div>
 
           <div>
-            <Label>Responsável</Label>
+            <Label className="text-slate-300">Responsável</Label>
             <Select value={responsibleFilter} onChange={(e) => setResponsibleFilter(e.target.value)} className="mt-2">
               <option value="todos">Todos</option>
               <option value="sem-responsavel">Sem responsável</option>
@@ -875,7 +911,7 @@ export function KanbanClient() {
           </div>
 
           <div>
-            <Label>Prioridade</Label>
+            <Label className="text-slate-300">Prioridade</Label>
             <Select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="mt-2">
               <option value="todas">Todas</option>
               {priorityOptions.map((option) => (
@@ -887,7 +923,7 @@ export function KanbanClient() {
           </div>
 
           <div>
-            <Label>Coluna</Label>
+            <Label className="text-slate-300">Coluna</Label>
             <Select value={columnFilter} onChange={(e) => setColumnFilter(e.target.value)} className="mt-2">
               <option value="todas">Todas</option>
               {columns.map((column) => (
@@ -899,7 +935,7 @@ export function KanbanClient() {
           </div>
 
           <div>
-            <Label>Etiqueta</Label>
+            <Label className="text-slate-300">Etiqueta</Label>
             <Select value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)} className="mt-2">
               <option value="todas">Todas</option>
               {labels.map((label) => (
@@ -912,16 +948,56 @@ export function KanbanClient() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button type="button" variant={showMineOnly ? "default" : "outline"} onClick={() => setShowMineOnly((value) => !value)}>
+          <Button
+            type="button"
+            variant={showMineOnly ? "default" : "outline"}
+            className={cn(
+              "rounded-full",
+              showMineOnly
+                ? "border-cyan-400/30 bg-cyan-400/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.16)]"
+                : "border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
+            )}
+            onClick={() => setShowMineOnly((value) => !value)}
+          >
             Minhas tarefas
           </Button>
-          <Button type="button" variant={showCreatedByMe ? "default" : "outline"} onClick={() => setShowCreatedByMe((value) => !value)}>
+          <Button
+            type="button"
+            variant={showCreatedByMe ? "default" : "outline"}
+            className={cn(
+              "rounded-full",
+              showCreatedByMe
+                ? "border-cyan-400/30 bg-cyan-400/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.16)]"
+                : "border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
+            )}
+            onClick={() => setShowCreatedByMe((value) => !value)}
+          >
             Criadas por mim
           </Button>
-          <Button type="button" variant={showUnassigned ? "default" : "outline"} onClick={() => setShowUnassigned((value) => !value)}>
+          <Button
+            type="button"
+            variant={showUnassigned ? "default" : "outline"}
+            className={cn(
+              "rounded-full",
+              showUnassigned
+                ? "border-cyan-400/30 bg-cyan-400/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.16)]"
+                : "border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
+            )}
+            onClick={() => setShowUnassigned((value) => !value)}
+          >
             Sem responsável
           </Button>
-          <Button type="button" variant={showOverdueOnly ? "default" : "outline"} onClick={() => setShowOverdueOnly((value) => !value)}>
+          <Button
+            type="button"
+            variant={showOverdueOnly ? "default" : "outline"}
+            className={cn(
+              "rounded-full",
+              showOverdueOnly
+                ? "border-rose-400/30 bg-rose-400/15 text-rose-50 shadow-[0_0_0_1px_rgba(251,113,133,0.16)]"
+                : "border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
+            )}
+            onClick={() => setShowOverdueOnly((value) => !value)}
+          >
             Vencidas
           </Button>
           <Select value={dueFilter} onChange={(e) => setDueFilter(e.target.value)} className="w-44">
@@ -935,12 +1011,12 @@ export function KanbanClient() {
         </div>
 
         {message ? (
-          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-50">
             {message}
           </div>
         ) : null}
 
-        <div className="mt-4 text-xs text-slate-500">
+        <div className="mt-4 text-xs text-slate-400">
           Fonte de dados: {source === "supabase" ? "Supabase" : "local"}.
           {loading ? " Carregando..." : ""}
         </div>
@@ -953,38 +1029,38 @@ export function KanbanClient() {
               <div
                 key={column.id}
                 className={cn(
-                  "flex min-h-[520px] flex-col rounded-2xl border p-3",
+                  "flex min-h-[520px] flex-col rounded-[26px] border p-3 backdrop-blur-xl transition",
                   column.is_archived
-                    ? "border-slate-300 bg-slate-100/80 opacity-85"
-                    : "border-slate-200 bg-slate-50/80"
+                    ? "border-white/10 bg-white/5 opacity-80"
+                    : "border-white/10 bg-white/[0.07]"
                 )}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => onDropCard(column.id)}
               >
                 <div
-                  className="mb-3 flex items-center justify-between rounded-xl px-3 py-3 text-white"
+                  className="mb-3 flex items-center justify-between rounded-[20px] border border-white/10 px-3 py-3 text-white shadow-[0_12px_28px_rgba(2,6,23,0.35)]"
                   style={{ backgroundColor: columnColor(column) }}
                 >
                   <div>
                     <div className="flex items-center gap-2 text-sm font-semibold">
                       <span>{column.name}</span>
                       <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
-                        {columnCards.length}
+                      {columnCards.length}
                       </span>
                       {column.is_archived ? (
-                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-100">
                           Arquivada
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 text-xs text-white/75">Arraste tarefas para mover entre etapas.</p>
+                    <p className="mt-1 text-xs text-white/75">Arraste cartões para mover entre etapas.</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/10" onClick={() => openCreate(column.id)} aria-label="Nova tarefa">
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/20" onClick={() => openCreate(column.id)} aria-label="Nova tarefa">
                       <Plus className="h-4 w-4" />
                     </Button>
                     {columnCards.length === 0 ? (
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/10" onClick={() => void removeColumn(column.id)} aria-label="Excluir coluna">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/20" onClick={() => void removeColumn(column.id)} aria-label="Excluir coluna">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     ) : null}
@@ -993,7 +1069,7 @@ export function KanbanClient() {
 
                 <div className="flex flex-1 flex-col gap-3">
                   {columnCards.length === 0 ? (
-                    <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
+                    <div className="flex flex-1 items-center justify-center rounded-[20px] border border-dashed border-white/15 bg-slate-950/30 p-4 text-center text-sm text-slate-300">
                       Sem cartões nesta etapa.
                     </div>
                   ) : null}
@@ -1009,32 +1085,32 @@ export function KanbanClient() {
                         onDragStart={() => setDraggingCardId(card.id)}
                         onDragEnd={() => setDraggingCardId(null)}
                         className={cn(
-                          "cursor-move rounded-xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5",
+                          "cursor-move rounded-[22px] border border-white/10 bg-slate-950/65 p-4 text-slate-100 shadow-[0_18px_40px_rgba(2,6,23,0.30)] transition hover:-translate-y-0.5 hover:border-cyan-400/25",
                           draggingCardId === card.id && "opacity-60"
                         )}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-slate-950">{card.title}</p>
-                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{card.description || "Sem descrição."}</p>
+                            <p className="text-sm font-semibold text-slate-50">{card.title}</p>
+                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-300">{card.description || "Sem descrição."}</p>
                           </div>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(card)} aria-label="Editar tarefa">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full border border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => openEdit(card)} aria-label="Editar tarefa">
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </div>
 
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold text-white", card.priority === "urgente" ? "bg-red-600" : card.priority === "alta" ? "bg-amber-600" : card.priority === "media" ? "bg-slate-700" : "bg-emerald-600")}>
+                          <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-[0_10px_22px_rgba(2,6,23,0.28)]", card.priority === "urgente" ? "bg-rose-500" : card.priority === "alta" ? "bg-amber-500" : card.priority === "media" ? "bg-cyan-500" : "bg-emerald-500")}>
                             {formatKanbanPriority(card.priority)}
                           </span>
                           {card.labels.slice(0, 2).map((label) => (
-                            <span key={label} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700">
+                            <span key={label} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-200">
                               {label}
                             </span>
                           ))}
                         </div>
 
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-300">
                           <div className="flex items-center gap-2">
                             <UserRound className="h-3.5 w-3.5" />
                             <span>{responsible || "Sem responsável"}</span>
@@ -1058,7 +1134,7 @@ export function KanbanClient() {
                             <Button
                               variant="outline"
                               size="icon"
-                              className="h-9 w-9"
+                              className="h-9 w-9 rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
                               disabled={index === 0}
                               onClick={() =>
                                 void moveCardWithinColumn(card, index - 1)
@@ -1070,7 +1146,7 @@ export function KanbanClient() {
                             <Button
                               variant="outline"
                               size="icon"
-                              className="h-9 w-9"
+                              className="h-9 w-9 rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
                               disabled={index === columnCards.length - 1}
                               onClick={() =>
                                 void moveCardWithinColumn(card, index + 1)
@@ -1080,11 +1156,11 @@ export function KanbanClient() {
                               <ArrowDown className="h-4 w-4" />
                             </Button>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => duplicateCard(card)}>
+                          <Button variant="outline" size="sm" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => duplicateCard(card)}>
                             <Copy className="h-4 w-4" />
                             Duplicar
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => removeCard(card.id)}>
+                          <Button variant="outline" size="sm" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => removeCard(card.id)}>
                             <Trash2 className="h-4 w-4" />
                             Excluir
                           </Button>
@@ -1100,10 +1176,10 @@ export function KanbanClient() {
       ) : null}
 
       {view === "table" ? (
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
+        <section className={cn(kanbanSurfaceClass, "overflow-hidden")}>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
+            <table className="min-w-full text-left text-sm text-slate-100">
+              <thead className="border-b border-white/10 bg-white/5 text-xs uppercase tracking-[0.12em] text-slate-400">
                 <tr>
                   <th className="px-4 py-3">Título</th>
                   <th className="px-4 py-3">Responsável</th>
@@ -1121,20 +1197,20 @@ export function KanbanClient() {
                   const column = columns.find((item) => item.id === card.column_id);
 
                   return (
-                    <tr key={card.id} className="border-b border-slate-100 last:border-0">
-                      <td className="px-4 py-3 font-medium text-slate-950">{card.title}</td>
-                      <td className="px-4 py-3 text-slate-600">{responsible}</td>
-                      <td className="px-4 py-3 text-slate-600">{column?.name ?? "-"}</td>
-                      <td className="px-4 py-3 text-slate-600">{formatKanbanPriority(card.priority)}</td>
-                      <td className="px-4 py-3 text-slate-600">{card.due_date ? formatDate(card.due_date) : "-"}</td>
-                      <td className="px-4 py-3 text-slate-600">{card.labels.join(", ") || "-"}</td>
-                      <td className="px-4 py-3 text-slate-600">{formatDateTime(card.updated_at)}</td>
+                    <tr key={card.id} className="border-b border-white/5 last:border-0">
+                      <td className="px-4 py-3 font-medium text-slate-50">{card.title}</td>
+                      <td className="px-4 py-3 text-slate-300">{responsible}</td>
+                      <td className="px-4 py-3 text-slate-300">{column?.name ?? "-"}</td>
+                      <td className="px-4 py-3 text-slate-300">{formatKanbanPriority(card.priority)}</td>
+                      <td className="px-4 py-3 text-slate-300">{card.due_date ? formatDate(card.due_date) : "-"}</td>
+                      <td className="px-4 py-3 text-slate-300">{card.labels.join(", ") || "-"}</td>
+                      <td className="px-4 py-3 text-slate-300">{formatDateTime(card.updated_at)}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
-                          <Button size="icon" variant="outline" onClick={() => openEdit(card)} aria-label="Editar">
+                          <Button size="icon" variant="outline" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => openEdit(card)} aria-label="Editar">
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button size="icon" variant="outline" onClick={() => removeCard(card.id)} aria-label="Excluir">
+                          <Button size="icon" variant="outline" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => removeCard(card.id)} aria-label="Excluir">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -1149,26 +1225,26 @@ export function KanbanClient() {
       ) : null}
 
       {view === "calendar" ? (
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
+        <section className={cn(kanbanSurfaceClass, "space-y-4 p-4")}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-950">Calendário</h2>
-              <p className="text-sm text-slate-500">Tarefas com data de entrega aparecem no mês selecionado.</p>
+              <h2 className="text-base font-semibold text-slate-50">Calendário</h2>
+              <p className="text-sm text-slate-300">Tarefas com data de entrega aparecem no mês selecionado.</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => setCalendarDate((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}>
+              <Button variant="outline" size="icon" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => setCalendarDate((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div className="min-w-56 rounded-lg border border-slate-200 px-4 py-2 text-center text-sm font-semibold text-slate-950">
+              <div className="min-w-56 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-center text-sm font-semibold text-slate-50 shadow-[0_12px_30px_rgba(2,6,23,0.25)]">
                 {new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(calendarDate)}
               </div>
-              <Button variant="outline" size="icon" onClick={() => setCalendarDate((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}>
+              <Button variant="outline" size="icon" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => setCalendarDate((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+          <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
             {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
               <div key={day} className="py-2">{day}</div>
             ))}
@@ -1177,7 +1253,7 @@ export function KanbanClient() {
           <div className="grid grid-cols-7 gap-2">
             {currentMonthDays().map((day, index) => {
               if (!day) {
-                return <div key={`empty-${index}`} className="min-h-32 rounded-xl border border-dashed border-slate-200 bg-slate-50/70" />;
+                return <div key={`empty-${index}`} className="min-h-32 rounded-[20px] border border-dashed border-white/10 bg-white/5" />;
               }
 
               const key = day.toISOString().slice(0, 10);
@@ -1185,10 +1261,10 @@ export function KanbanClient() {
               const today = new Date().toISOString().slice(0, 10) === key;
 
               return (
-                <div key={key} className={cn("min-h-32 rounded-xl border p-3", today ? "border-slate-950 bg-slate-50" : "border-slate-200 bg-white")}>
-                  <div className="flex items-center justify-between text-sm font-semibold text-slate-950">
+                <div key={key} className={cn("min-h-32 rounded-[20px] border p-3", today ? "border-cyan-400/25 bg-cyan-400/10" : "border-white/10 bg-white/5")}>
+                  <div className="flex items-center justify-between text-sm font-semibold text-slate-50">
                     <span>{day.getDate()}</span>
-                    <span className="text-xs text-slate-500">{dayCards.length} tarefas</span>
+                    <span className="text-xs text-slate-300">{dayCards.length} tarefas</span>
                   </div>
                   <div className="mt-2 space-y-2">
                     {dayCards.slice(0, 4).map((card) => (
@@ -1197,15 +1273,15 @@ export function KanbanClient() {
                         type="button"
                         onClick={() => openEdit(card)}
                         className={cn(
-                          "block w-full rounded-lg border px-2 py-1.5 text-left text-xs font-medium transition",
-                          isOverdue(card) ? "border-red-200 bg-red-50 text-red-800" : "border-slate-200 bg-slate-50 text-slate-700"
+                          "block w-full rounded-xl border px-2 py-1.5 text-left text-xs font-medium transition",
+                          isOverdue(card) ? "border-rose-400/25 bg-rose-400/10 text-rose-100" : "border-white/10 bg-white/5 text-slate-200"
                         )}
                       >
                         {card.title}
                       </button>
                     ))}
                     {dayCards.length > 4 ? (
-                      <div className="text-xs text-slate-500">+ {dayCards.length - 4} tarefas</div>
+                      <div className="text-xs text-slate-400">+ {dayCards.length - 4} tarefas</div>
                     ) : null}
                   </div>
                 </div>
@@ -1213,11 +1289,11 @@ export function KanbanClient() {
             })}
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <h3 className="text-sm font-semibold text-slate-950">Sem data de entrega</h3>
+          <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+            <h3 className="text-sm font-semibold text-slate-50">Sem data de entrega</h3>
             <div className="mt-3 flex flex-wrap gap-2">
               {cards.filter((card) => !card.due_date).map((card) => (
-                <button key={card.id} type="button" onClick={() => openEdit(card)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700">
+                <button key={card.id} type="button" onClick={() => openEdit(card)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">
                   {card.title}
                 </button>
               ))}
@@ -1227,12 +1303,12 @@ export function KanbanClient() {
       ) : null}
 
       {columnEditorOpen ? (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-950/60 p-4">
-          <div className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.35)]">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-950/75 p-4 backdrop-blur-sm">
+          <div className={cn(kanbanSurfaceClass, "flex h-full w-full max-w-5xl flex-col overflow-hidden")}>
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <div>
-                <h2 className="text-base font-semibold text-slate-950">Editor de colunas</h2>
-                <p className="text-sm text-slate-500">Crie, renomeie e arquive colunas sem mexer nas tarefas.</p>
+                <h2 className="text-base font-semibold text-slate-50">Editor de colunas</h2>
+                <p className="text-sm text-slate-300">Crie, renomeie e arquive colunas sem mexer nas tarefas.</p>
               </div>
               <Button type="button" variant="ghost" size="icon" onClick={closeColumnEditor}>
                 <X className="h-4 w-4" />
@@ -1240,20 +1316,20 @@ export function KanbanClient() {
             </div>
 
             <div className="grid flex-1 gap-0 lg:grid-cols-[1.3fr_0.9fr]">
-              <div className="border-b border-slate-200 p-5 lg:border-b-0 lg:border-r">
+              <div className="border-b border-white/10 p-5 lg:border-b-0 lg:border-r">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-950">Colunas existentes</h3>
-                    <p className="text-xs text-slate-500">Clique em editar para ajustar nome, cor e status.</p>
+                    <h3 className="text-sm font-semibold text-slate-50">Colunas existentes</h3>
+                    <p className="text-xs text-slate-300">Clique em editar para ajustar nome, cor e status.</p>
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={createColumnDraft}>
+                  <Button type="button" variant="outline" size="sm" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={createColumnDraft}>
                     <Plus className="h-4 w-4" />
                     Nova
                   </Button>
                 </div>
 
                 {columnMessage ? (
-                  <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-50">
                     {columnMessage}
                   </div>
                 ) : null}
@@ -1263,41 +1339,42 @@ export function KanbanClient() {
                     <div
                       key={column.id}
                       className={cn(
-                        "rounded-xl border p-4",
+                        "rounded-[22px] border p-4",
                         editingColumnId === column.id
-                          ? "border-slate-950 bg-slate-50"
-                          : "border-slate-200 bg-white"
+                          ? "border-cyan-400/25 bg-cyan-400/10"
+                          : "border-white/10 bg-white/5"
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span
-                              className="h-3 w-3 rounded-full border border-slate-200"
-                              style={{ backgroundColor: column.color || "#334155" }}
-                            />
-                            <h4 className="truncate text-sm font-semibold text-slate-950">
+                            className="h-3 w-3 rounded-full border border-white/10"
+                            style={{ backgroundColor: column.color || "#334155" }}
+                          />
+                            <h4 className="truncate text-sm font-semibold text-slate-50">
                               {column.name}
                             </h4>
                             {column.is_archived ? (
-                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-200">
                                 Arquivada
                               </span>
                             ) : null}
                           </div>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-slate-300">
                             {board.cards.filter((card) => card.column_id === column.id).length} tarefa(s)
                           </p>
                         </div>
 
                         <div className="flex gap-2">
-                          <Button type="button" size="icon" variant="outline" onClick={() => editColumn(column)} aria-label="Editar coluna">
+                          <Button type="button" size="icon" variant="outline" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={() => editColumn(column)} aria-label="Editar coluna">
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
                             type="button"
                             size="icon"
                             variant="outline"
+                            className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
                             onClick={() => void removeColumnDraft(column.id)}
                             aria-label="Excluir coluna"
                           >
@@ -1311,16 +1388,16 @@ export function KanbanClient() {
               </div>
 
               <div className="p-5">
-                <h3 className="text-sm font-semibold text-slate-950">
+                <h3 className="text-sm font-semibold text-slate-50">
                   {editingColumnId ? "Editar coluna" : "Nova coluna"}
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-300">
                   Alterações são salvas no banco e aparecem para toda a equipe.
                 </p>
 
                 <div className="mt-4 space-y-4">
                   <div className="space-y-2">
-                    <Label>Nome</Label>
+                    <Label className="text-slate-300">Nome</Label>
                     <Input
                       value={columnDraft.name}
                       onChange={(e) =>
@@ -1334,7 +1411,7 @@ export function KanbanClient() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Cor</Label>
+                    <Label className="text-slate-300">Cor</Label>
                     <div className="flex items-center gap-3">
                       <Input
                         type="color"
@@ -1361,7 +1438,7 @@ export function KanbanClient() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Ordem</Label>
+                    <Label className="text-slate-300">Ordem</Label>
                     <Input
                       type="number"
                       min={0}
@@ -1375,7 +1452,7 @@ export function KanbanClient() {
                     />
                   </div>
 
-                  <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3">
+                  <label className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/5 px-4 py-3">
                     <input
                       type="checkbox"
                       checked={columnDraft.is_archived}
@@ -1387,18 +1464,18 @@ export function KanbanClient() {
                       }
                     />
                     <span>
-                      <span className="block text-sm font-medium text-slate-950">Arquivar coluna</span>
-                      <span className="block text-xs text-slate-500">
+                      <span className="block text-sm font-medium text-slate-50">Arquivar coluna</span>
+                      <span className="block text-xs text-slate-300">
                         Mantém a coluna no sistema, mas sinalizada como arquivada.
                       </span>
                     </span>
                   </label>
 
                   <div className="flex items-center gap-2 pt-2">
-                    <Button type="button" onClick={() => void persistColumn()} disabled={saving}>
+                    <Button type="button" className="rounded-full bg-cyan-500/85 text-slate-950 hover:bg-cyan-400" onClick={() => void persistColumn()} disabled={saving}>
                       {saving ? "Salvando..." : editingColumnId ? "Salvar alterações" : "Criar coluna"}
                     </Button>
-                    <Button type="button" variant="outline" onClick={closeColumnEditor}>
+                    <Button type="button" variant="outline" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={closeColumnEditor}>
                       Fechar
                     </Button>
                   </div>
@@ -1412,40 +1489,40 @@ export function KanbanClient() {
       {view === "dashboard" ? (
         <section className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card>
+            <Card className={kanbanCardClass}>
               <CardContent>
-                <p className="text-sm text-slate-500">Total de tarefas</p>
-                <p className="mt-2 text-3xl font-semibold text-slate-950">{metrics.total}</p>
-                <p className="mt-2 text-xs text-slate-500">Base geral do quadro.</p>
+                <p className="text-sm text-slate-300">Total de tarefas</p>
+                <p className="mt-2 text-3xl font-semibold text-slate-50">{metrics.total}</p>
+                <p className="mt-2 text-xs text-slate-400">Base geral do quadro.</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className={kanbanCardClass}>
               <CardContent>
-                <p className="text-sm text-slate-500">Concluídas</p>
-                <p className="mt-2 text-3xl font-semibold text-emerald-600">{metrics.done}</p>
-                <p className="mt-2 text-xs text-slate-500">{formatPercent(dashboard.completionRate)} do total</p>
+                <p className="text-sm text-slate-300">Concluídas</p>
+                <p className="mt-2 text-3xl font-semibold text-emerald-300">{metrics.done}</p>
+                <p className="mt-2 text-xs text-slate-400">{formatPercent(dashboard.completionRate)} do total</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className={kanbanCardClass}>
               <CardContent>
-                <p className="text-sm text-slate-500">Vencidas</p>
-                <p className="mt-2 text-3xl font-semibold text-red-600">{metrics.overdue}</p>
-                <p className="mt-2 text-xs text-slate-500">Itens que precisam de atenção.</p>
+                <p className="text-sm text-slate-300">Vencidas</p>
+                <p className="mt-2 text-3xl font-semibold text-rose-300">{metrics.overdue}</p>
+                <p className="mt-2 text-xs text-slate-400">Itens que precisam de atenção.</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className={kanbanCardClass}>
               <CardContent>
-                <p className="text-sm text-slate-500">Urgentes</p>
-                <p className="mt-2 text-3xl font-semibold text-amber-600">{metrics.urgent}</p>
-                <p className="mt-2 text-xs text-slate-500">{dashboard.dueSoonCount} vencem nos próximos 7 dias</p>
+                <p className="text-sm text-slate-300">Urgentes</p>
+                <p className="mt-2 text-3xl font-semibold text-amber-300">{metrics.urgent}</p>
+                <p className="mt-2 text-xs text-slate-400">{dashboard.dueSoonCount} vencem nos próximos 7 dias</p>
               </CardContent>
             </Card>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1.3fr_0.9fr]">
-            <Card>
-              <CardHeader>
-                <CardTitle>Fluxo por coluna</CardTitle>
+            <Card className={kanbanCardClass}>
+              <CardHeader className="border-b border-white/10 bg-white/5">
+                <CardTitle className="text-slate-50">Fluxo por coluna</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {columnStats.map(({ column, count }) => {
@@ -1453,10 +1530,10 @@ export function KanbanClient() {
                   return (
                     <div key={column.id} className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-700">{column.name}</span>
-                        <span className="text-slate-500">{count} {formatPercent(percent)}</span>
+                        <span className="font-medium text-slate-100">{column.name}</span>
+                        <span className="text-slate-400">{count} {formatPercent(percent)}</span>
                       </div>
-                      <div className="h-2 rounded-full bg-slate-100">
+                      <div className="h-2 rounded-full bg-white/10">
                         <div className="h-2 rounded-full" style={{ width: `${percent * 100}%`, backgroundColor: columnColor(column) }} />
                       </div>
                     </div>
@@ -1466,9 +1543,9 @@ export function KanbanClient() {
             </Card>
 
             <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Prioridade e pauta</CardTitle>
+              <Card className={kanbanCardClass}>
+                <CardHeader className="border-b border-white/10 bg-white/5">
+                  <CardTitle className="text-slate-50">Prioridade e pauta</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {dashboard.priorityCounts.map((item) => {
@@ -1476,10 +1553,10 @@ export function KanbanClient() {
                     return (
                       <div key={item.value} className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium text-slate-700">{item.label}</span>
-                          <span className="text-slate-500">{item.count}</span>
+                          <span className="font-medium text-slate-100">{item.label}</span>
+                          <span className="text-slate-400">{item.count}</span>
                         </div>
-                        <div className="h-2 rounded-full bg-slate-100">
+                        <div className="h-2 rounded-full bg-white/10">
                           <div className="h-2 rounded-full bg-slate-950" style={{ width: `${percent * 100}%` }} />
                         </div>
                       </div>
@@ -1488,26 +1565,26 @@ export function KanbanClient() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Capacidade</CardTitle>
+              <Card className={kanbanCardClass}>
+                <CardHeader className="border-b border-white/10 bg-white/5">
+                  <CardTitle className="text-slate-50">Capacidade</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Sem responsável</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950">{dashboard.withoutResponsibleCount}</p>
+                  <div className={kanbanMutedCardClass}>
+                    <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Sem responsável</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-50">{dashboard.withoutResponsibleCount}</p>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Com prazo</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950">{dashboard.withDueDateCount}</p>
+                  <div className={kanbanMutedCardClass}>
+                    <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Com prazo</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-50">{dashboard.withDueDateCount}</p>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Checklist médio</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950">{formatPercent(dashboard.checklistAverage)}</p>
+                  <div className={kanbanMutedCardClass}>
+                    <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Checklist médio</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-50">{formatPercent(dashboard.checklistAverage)}</p>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Responsáveis ativos</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950">{dashboard.responsibleCounts.filter((item) => item.count > 0).length}</p>
+                  <div className={kanbanMutedCardClass}>
+                    <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Responsáveis ativos</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-50">{dashboard.responsibleCounts.filter((item) => item.count > 0).length}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -1515,42 +1592,42 @@ export function KanbanClient() {
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tarefas por responsável</CardTitle>
+            <Card className={kanbanCardClass}>
+              <CardHeader className="border-b border-white/10 bg-white/5">
+                <CardTitle className="text-slate-50">Tarefas por responsável</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {dashboard.responsibleCounts.slice(0, 8).map((user) => (
                   <div key={user.id} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{user.name}</span>
-                      <span className="text-slate-500">{user.count}</span>
+                      <span className="font-medium text-slate-100">{user.name}</span>
+                      <span className="text-slate-400">{user.count}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-slate-100">
-                      <div className="h-2 rounded-full bg-slate-950" style={{ width: `${metrics.total ? (user.count / metrics.total) * 100 : 0}%` }} />
+                    <div className="h-2 rounded-full bg-white/10">
+                      <div className="h-2 rounded-full bg-cyan-400" style={{ width: `${metrics.total ? (user.count / metrics.total) * 100 : 0}%` }} />
                     </div>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Etiquetas em destaque</CardTitle>
+            <Card className={kanbanCardClass}>
+              <CardHeader className="border-b border-white/10 bg-white/5">
+                <CardTitle className="text-slate-50">Etiquetas em destaque</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {dashboard.labelCounts.length === 0 ? (
-                  <p className="text-sm text-slate-500">Nenhuma etiqueta com volume suficiente.</p>
+                  <p className="text-sm text-slate-400">Nenhuma etiqueta com volume suficiente.</p>
                 ) : null}
                 {dashboard.labelCounts.map((item) => {
                   const percent = metrics.total ? item.count / metrics.total : 0;
                   return (
                     <div key={item.label} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-700">{item.label}</span>
-                        <span className="text-slate-500">{item.count}</span>
+                        <span className="font-medium text-slate-100">{item.label}</span>
+                        <span className="text-slate-400">{item.count}</span>
                       </div>
-                      <div className="h-2 rounded-full bg-slate-100">
+                      <div className="h-2 rounded-full bg-white/10">
                         <div className="h-2 rounded-full bg-emerald-600" style={{ width: `${percent * 100}%` }} />
                       </div>
                     </div>
@@ -1563,34 +1640,34 @@ export function KanbanClient() {
       ) : null}
 
       {view === "timeline" ? (
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
+        <section className={cn(kanbanSurfaceClass, "space-y-4 p-4")}>
           <div>
-            <h2 className="text-base font-semibold text-slate-950">Timeline</h2>
-            <p className="text-sm text-slate-500">Tarefas com início e entrega aparecem posicionadas no período.</p>
+            <h2 className="text-base font-semibold text-slate-50">Timeline</h2>
+            <p className="text-sm text-slate-300">Tarefas com início e entrega aparecem posicionadas no período.</p>
           </div>
 
           <div className="grid gap-3 md:grid-cols-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Com período</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{timelineCards.length}</p>
+            <div className={kanbanMutedCardClass}>
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Com período</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-50">{timelineCards.length}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Sem prazo</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{cards.filter((card) => !card.due_date).length}</p>
+            <div className={kanbanMutedCardClass}>
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Sem prazo</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-50">{cards.filter((card) => !card.due_date).length}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Hoje</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{cards.filter((card) => toInputDate(card.due_date) === new Date().toISOString().slice(0, 10)).length}</p>
+            <div className={kanbanMutedCardClass}>
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Hoje</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-50">{cards.filter((card) => toInputDate(card.due_date) === new Date().toISOString().slice(0, 10)).length}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Vencidas</p>
-              <p className="mt-2 text-2xl font-semibold text-red-600">{metrics.overdue}</p>
+            <div className={kanbanMutedCardClass}>
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Vencidas</p>
+              <p className="mt-2 text-2xl font-semibold text-rose-300">{metrics.overdue}</p>
             </div>
           </div>
 
           <div className="space-y-3">
             {timelineCards.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
+              <div className="rounded-[20px] border border-dashed border-white/10 bg-white/5 p-6 text-sm text-slate-300">
                 Nenhuma tarefa com período definido.
               </div>
             ) : null}
@@ -1607,29 +1684,29 @@ export function KanbanClient() {
               const overdue = isOverdue(card);
 
               return (
-                <div key={card.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div key={card.id} className={kanbanMutedCardClass}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <button type="button" onClick={() => openEdit(card)} className="text-left">
-                        <p className="font-semibold text-slate-950">{card.title}</p>
+                        <p className="font-semibold text-slate-50">{card.title}</p>
                       </button>
-                      <p className="text-xs text-slate-500">{formatDateRange(card.start_date, card.due_date)}</p>
-                      <p className="text-xs text-slate-500">{responsible}</p>
+                      <p className="text-xs text-slate-300">{formatDateRange(card.start_date, card.due_date)}</p>
+                      <p className="text-xs text-slate-300">{responsible}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className="rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white">
+                      <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-slate-50">
                         {formatKanbanPriority(card.priority)}
                       </span>
                       {overdue ? (
-                        <span className="rounded-full bg-red-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-red-700">
+                        <span className="rounded-full border border-rose-400/20 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-100">
                           Vencida
                         </span>
                       ) : null}
                     </div>
                   </div>
 
-                  <div className="mt-4 h-3 rounded-full bg-white">
-                    <div className="relative h-3 rounded-full bg-slate-100">
+                  <div className="mt-4 h-3 rounded-full bg-white/10">
+                    <div className="relative h-3 rounded-full bg-white/5">
                       <div
                         className={cn(
                           "absolute top-0 h-3 rounded-full",
@@ -1643,7 +1720,7 @@ export function KanbanClient() {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-300">
                     <span>{cardProgress(card)} checklist</span>
                     <span>•</span>
                     <span>{card.labels.slice(0, 2).join(", ") || "Sem etiquetas"}</span>
@@ -1658,14 +1735,14 @@ export function KanbanClient() {
       ) : null}
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-950/60 p-4">
-          <div className="flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.35)]">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-950/75 p-4 backdrop-blur-sm">
+          <div className={cn(kanbanSurfaceClass, "flex h-full w-full max-w-3xl flex-col overflow-hidden")}>
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <div>
-                <h2 className="text-base font-semibold text-slate-950">
+                <h2 className="text-base font-semibold text-slate-50">
                   {editingCardId ? "Editar tarefa" : "Nova tarefa"}
                 </h2>
-                <p className="text-sm text-slate-500">Preencha os campos principais e salve para manter tudo persistido.</p>
+                <p className="text-sm text-slate-300">Preencha os campos principais e salve para manter tudo persistido.</p>
               </div>
               <Button type="button" variant="ghost" size="icon" onClick={closeModal}>
                 <X className="h-4 w-4" />
@@ -1675,17 +1752,17 @@ export function KanbanClient() {
             <div className="flex-1 overflow-y-auto p-5">
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-2 lg:col-span-2">
-                  <Label>Título</Label>
+                  <Label className="text-slate-300">Título</Label>
                   <Input value={draft.title} onChange={(e) => setDraft((current) => ({ ...current, title: e.target.value }))} placeholder="Digite o nome da tarefa" />
                 </div>
 
                 <div className="space-y-2 lg:col-span-2">
-                  <Label>Descrição</Label>
+                  <Label className="text-slate-300">Descrição</Label>
                   <Textarea value={draft.description} onChange={(e) => setDraft((current) => ({ ...current, description: e.target.value }))} placeholder="Descreva o contexto da tarefa" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Coluna</Label>
+                  <Label className="text-slate-300">Coluna</Label>
                   <Select value={draft.column_id} onChange={(e) => setDraft((current) => ({ ...current, column_id: e.target.value }))}>
                     {columns.map((column) => (
                       <option key={column.id} value={column.id}>
@@ -1696,7 +1773,7 @@ export function KanbanClient() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Responsável</Label>
+                  <Label className="text-slate-300">Responsável</Label>
                   <Select value={draft.responsible_id} onChange={(e) => setDraft((current) => ({ ...current, responsible_id: e.target.value }))}>
                     <option value="">Sem responsável</option>
                     {normalizeBoardUsers(board).map((user) => (
@@ -1708,7 +1785,7 @@ export function KanbanClient() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Prioridade</Label>
+                  <Label className="text-slate-300">Prioridade</Label>
                   <Select value={draft.priority} onChange={(e) => setDraft((current) => ({ ...current, priority: e.target.value as KanbanPriority }))}>
                     {priorityOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1719,22 +1796,22 @@ export function KanbanClient() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Prazo</Label>
+                  <Label className="text-slate-300">Prazo</Label>
                   <Input type="date" value={draft.due_date} onChange={(e) => setDraft((current) => ({ ...current, due_date: e.target.value }))} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Início</Label>
+                  <Label className="text-slate-300">Início</Label>
                   <Input type="date" value={draft.start_date} onChange={(e) => setDraft((current) => ({ ...current, start_date: e.target.value }))} />
                 </div>
 
                 <div className="space-y-2 lg:col-span-2">
-                  <Label>Etiquetas</Label>
+                  <Label className="text-slate-300">Etiquetas</Label>
                   <Input value={draft.labelsText} onChange={(e) => setDraft((current) => ({ ...current, labelsText: e.target.value }))} placeholder="Cliente, prioridade, demanda" />
                 </div>
 
                 <div className="space-y-2 lg:col-span-2">
-                  <Label>Anexos</Label>
+                  <Label className="text-slate-300">Anexos</Label>
                   <Textarea
                     value={draft.attachmentsText}
                     onChange={(e) => setDraft((current) => ({ ...current, attachmentsText: e.target.value }))}
@@ -1744,11 +1821,11 @@ export function KanbanClient() {
               </div>
 
               <div className="mt-6 grid gap-4 xl:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 p-4">
+                <div className={kanbanMutedCardClass}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-slate-950">Campos personalizados</h3>
-                      <p className="text-xs text-slate-500">Base para Cliente, Processo, Área e similares.</p>
+                      <h3 className="font-semibold text-slate-50">Campos personalizados</h3>
+                      <p className="text-xs text-slate-300">Base para Cliente, Processo, Área e similares.</p>
                     </div>
                   </div>
 
@@ -1774,13 +1851,13 @@ export function KanbanClient() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="rounded-xl border border-slate-200 p-4">
+                  <div className={kanbanMutedCardClass}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-slate-950">Checklist</h3>
-                        <p className="text-xs text-slate-500">{checklistSummary(draft.checklist)} concluídos</p>
+                        <h3 className="font-semibold text-slate-50">Checklist</h3>
+                        <p className="text-xs text-slate-300">{checklistSummary(draft.checklist)} concluídos</p>
                       </div>
-                      <Button type="button" variant="outline" size="sm" onClick={addChecklistItem}>
+                      <Button type="button" variant="outline" size="sm" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={addChecklistItem}>
                         <Plus className="h-4 w-4" />
                         Item
                       </Button>
@@ -1788,7 +1865,7 @@ export function KanbanClient() {
 
                     <div className="mt-4 space-y-2">
                       {draft.checklist.map((item, index) => (
-                        <div key={item.id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2">
+                        <div key={item.id} className="flex items-center gap-2 rounded-[18px] border border-white/10 bg-slate-950/35 px-3 py-2">
                           <input
                             type="checkbox"
                             checked={item.completed}
@@ -1817,6 +1894,7 @@ export function KanbanClient() {
                             type="button"
                             variant="ghost"
                             size="icon"
+                            className="rounded-full text-slate-100 hover:bg-white/10 hover:text-white"
                             onClick={() =>
                               setDraft((current) => ({
                                 ...current,
@@ -1829,21 +1907,21 @@ export function KanbanClient() {
                         </div>
                       ))}
                     </div>
-                  </div>
+                </div>
 
-                  <div className="rounded-xl border border-slate-200 p-4">
+                  <div className={kanbanMutedCardClass}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-slate-950">Comentários</h3>
-                        <p className="text-xs text-slate-500">Registros internos da tarefa.</p>
+                        <h3 className="font-semibold text-slate-50">Comentários</h3>
+                        <p className="text-xs text-slate-300">Registros internos da tarefa.</p>
                       </div>
                     </div>
 
                     <div className="mt-4 space-y-3">
                       {draft.comments.map((comment, index) => (
-                        <div key={`${comment.created_at ?? index}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                        <div key={`${comment.created_at ?? index}-${index}`} className="rounded-[18px] border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200">
                           <p>{comment.text}</p>
-                          {comment.created_at ? <p className="mt-1 text-xs text-slate-500">{formatDateTime(comment.created_at)}</p> : null}
+                          {comment.created_at ? <p className="mt-1 text-xs text-slate-400">{formatDateTime(comment.created_at)}</p> : null}
                         </div>
                       ))}
 
@@ -1852,7 +1930,7 @@ export function KanbanClient() {
                         onChange={(e) => setDraft((current) => ({ ...current, newComment: e.target.value }))}
                         placeholder="Adicionar comentário"
                       />
-                      <Button type="button" variant="outline" onClick={addComment}>
+                      <Button type="button" variant="outline" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={addComment}>
                         Adicionar comentário
                       </Button>
                     </div>
@@ -1861,15 +1939,15 @@ export function KanbanClient() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-5 py-4">
-              <div className="text-xs text-slate-500">
+            <div className="flex items-center justify-between gap-3 border-t border-white/10 px-5 py-4">
+              <div className="text-xs text-slate-400">
                 {editingCardId ? "Alterações vão atualizar a tarefa existente." : "A tarefa nova será salva na coluna selecionada."}
               </div>
               <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" onClick={closeModal}>
+                <Button type="button" variant="outline" className="rounded-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white" onClick={closeModal}>
                   Cancelar
                 </Button>
-                <Button type="button" onClick={() => void persistCard()} disabled={saving}>
+                <Button type="button" className="rounded-full bg-cyan-500/85 text-slate-950 hover:bg-cyan-400" onClick={() => void persistCard()} disabled={saving}>
                   {saving ? "Salvando..." : "Salvar"}
                 </Button>
               </div>
@@ -1877,6 +1955,7 @@ export function KanbanClient() {
           </div>
         </div>
       ) : null}
+      </div>
     </div>
   );
 }
