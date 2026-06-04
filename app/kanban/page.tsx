@@ -5,7 +5,7 @@ import { KanbanClient } from "./kanban-client";
 
 export default function KanbanPage() {
   return (
-    <DashboardShell>
+    <DashboardShell contentClassName="max-w-none" mainClassName="p-3 pb-24 lg:p-4">
       <PageHeader
         eyebrow="Kanban da equipe"
         title="Kanban da Equipe"

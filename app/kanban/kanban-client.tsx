@@ -1024,12 +1024,12 @@ export function KanbanClient() {
 
       {view === "board" ? (
         <section className="space-y-4">
-          <div className="grid gap-4 overflow-x-auto pb-2 xl:grid-cols-[repeat(7,minmax(280px,1fr))]">
+          <div className="grid gap-2.5 overflow-x-auto pb-2 xl:grid-cols-[repeat(7,minmax(190px,1fr))]">
             {boardCardsByColumn.map(({ column, cards: columnCards }) => (
               <div
                 key={column.id}
                 className={cn(
-                  "flex min-h-[520px] flex-col rounded-[26px] border p-3 backdrop-blur-xl transition",
+                  "flex min-h-[470px] flex-col rounded-[24px] border p-2.5 backdrop-blur-xl transition",
                   column.is_archived
                     ? "border-white/10 bg-white/5 opacity-80"
                     : "border-white/10 bg-white/[0.07]"
@@ -1038,7 +1038,7 @@ export function KanbanClient() {
                 onDrop={() => onDropCard(column.id)}
               >
                 <div
-                  className="mb-3 flex items-center justify-between rounded-[20px] border border-white/10 px-3 py-3 text-white shadow-[0_12px_28px_rgba(2,6,23,0.35)]"
+                  className="mb-2.5 flex items-center justify-between rounded-[18px] border border-white/10 px-3 py-2.5 text-white shadow-[0_12px_28px_rgba(2,6,23,0.35)]"
                   style={{ backgroundColor: columnColor(column) }}
                 >
                   <div>
@@ -1067,7 +1067,7 @@ export function KanbanClient() {
                   </div>
                 </div>
 
-                <div className="flex flex-1 flex-col gap-3">
+                  <div className="flex flex-1 flex-col gap-2.5">
                   {columnCards.length === 0 ? (
                     <div className="flex flex-1 items-center justify-center rounded-[20px] border border-dashed border-white/15 bg-slate-950/30 p-4 text-center text-sm text-slate-300">
                       Sem cartões nesta etapa.
@@ -1085,7 +1085,7 @@ export function KanbanClient() {
                         onDragStart={() => setDraggingCardId(card.id)}
                         onDragEnd={() => setDraggingCardId(null)}
                         className={cn(
-                          "cursor-move rounded-[22px] border border-white/10 bg-slate-950/65 p-4 text-slate-100 shadow-[0_18px_40px_rgba(2,6,23,0.30)] transition hover:-translate-y-0.5 hover:border-cyan-400/25",
+                          "cursor-move rounded-[20px] border border-white/10 bg-slate-950/65 p-3.5 text-slate-100 shadow-[0_18px_40px_rgba(2,6,23,0.30)] transition hover:-translate-y-0.5 hover:border-cyan-400/25",
                           draggingCardId === card.id && "opacity-60"
                         )}
                       >
@@ -1099,7 +1099,7 @@ export function KanbanClient() {
                           </Button>
                         </div>
 
-                        <div className="mt-3 flex flex-wrap gap-2">
+                        <div className="mt-2.5 flex flex-wrap gap-2">
                           <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-[0_10px_22px_rgba(2,6,23,0.28)]", card.priority === "urgente" ? "bg-rose-500" : card.priority === "alta" ? "bg-amber-500" : card.priority === "media" ? "bg-cyan-500" : "bg-emerald-500")}>
                             {formatKanbanPriority(card.priority)}
                           </span>
@@ -1110,7 +1110,7 @@ export function KanbanClient() {
                           ))}
                         </div>
 
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-300">
+                        <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs text-slate-300">
                           <div className="flex items-center gap-2">
                             <UserRound className="h-3.5 w-3.5" />
                             <span>{responsible || "Sem responsável"}</span>
@@ -1129,7 +1129,7 @@ export function KanbanClient() {
                           </div>
                         </div>
 
-                        <div className="mt-4 flex flex-wrap gap-2">
+                        <div className="mt-3 flex flex-wrap gap-2">
                           <div className="flex items-center gap-1">
                             <Button
                               variant="outline"
