@@ -24,19 +24,19 @@ export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
   const items = isAdmin ? [...baseItems, ...adminItems] : baseItems;
 
   return (
-    <aside className="hidden w-72 border-r border-slate-900 bg-slate-950 text-white lg:block">
-      <div className="flex h-24 items-center border-b border-white/10 px-6">
+    <aside className="group/sidebar sticky top-0 z-30 hidden h-screen w-20 overflow-hidden border-r border-slate-900 bg-slate-950 text-white transition-[width] duration-300 ease-out lg:block lg:hover:w-72 lg:focus-within:w-72">
+      <div className="flex h-24 items-center border-b border-white/10 px-4 lg:px-6">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/10">
             CS
           </div>
-          <div>
+          <div className="min-w-0 overflow-hidden opacity-0 transition-all duration-300 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75">
             <p className="text-base font-semibold tracking-wide text-white">CS Inteligente</p>
             <p className="text-xs text-slate-400">Operações internas</p>
           </div>
         </div>
       </div>
-      <nav className="space-y-2 p-4">
+      <nav className="space-y-2 p-3 lg:p-4">
         {items.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href;
@@ -46,7 +46,7 @@ export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "group flex h-12 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white",
+                "group flex h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white lg:justify-center lg:px-0 lg:group-hover/sidebar:justify-start lg:group-hover/sidebar:px-3",
                 active && "bg-white text-slate-950 shadow-[0_14px_28px_rgba(0,0,0,0.22)] hover:bg-white hover:text-slate-950"
               )}
               aria-label={item.label}
@@ -58,7 +58,9 @@ export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
               )}>
                 <Icon className="h-4 w-4" />
               </span>
-              <span>{item.label}</span>
+              <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 group-hover/sidebar:max-w-[180px] group-hover/sidebar:opacity-100">
+                {item.label}
+              </span>
             </Link>
           );
         })}

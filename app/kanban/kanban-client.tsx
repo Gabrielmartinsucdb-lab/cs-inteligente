@@ -1024,12 +1024,12 @@ export function KanbanClient() {
 
       {view === "board" ? (
         <section className="space-y-4">
-          <div className="grid gap-3 overflow-x-auto pb-2 xl:grid-cols-[repeat(7,minmax(220px,1fr))] 2xl:grid-cols-[repeat(7,minmax(230px,1fr))]">
+          <div className="grid gap-4 overflow-x-auto pb-2 xl:grid-cols-[repeat(7,minmax(250px,1fr))] 2xl:grid-cols-[repeat(7,minmax(270px,1fr))]">
             {boardCardsByColumn.map(({ column, cards: columnCards }) => (
               <div
                 key={column.id}
                 className={cn(
-                  "flex min-h-[500px] flex-col rounded-[24px] border p-3 backdrop-blur-xl transition",
+                  "flex min-h-[500px] flex-col rounded-[24px] border p-3.5 backdrop-blur-xl transition",
                   column.is_archived
                     ? "border-white/10 bg-white/5 opacity-80"
                     : "border-white/10 bg-white/[0.07]"
@@ -1038,23 +1038,25 @@ export function KanbanClient() {
                 onDrop={() => onDropCard(column.id)}
               >
                 <div
-                  className="mb-3 flex items-center justify-between rounded-[18px] border border-white/10 px-3 py-2.5 text-white shadow-[0_12px_28px_rgba(2,6,23,0.35)]"
+                  className="mb-3 flex items-center justify-between gap-3 rounded-[18px] border border-white/10 px-3 py-2.5 text-white shadow-[0_12px_28px_rgba(2,6,23,0.35)]"
                   style={{ backgroundColor: columnColor(column) }}
                 >
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 pr-2">
                     <div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-                      <span className="whitespace-nowrap">{column.name}</span>
-                      <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
+                      <span className="truncate whitespace-nowrap text-[13px] leading-none">
+                        {column.name}
+                      </span>
+                      <span className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
                         {columnCards.length}
                       </span>
                       {column.is_archived ? (
-                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-100">
+                        <span className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-100">
                           Arquivada
                         </span>
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                     <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/20" onClick={() => openCreate(column.id)} aria-label="Nova tarefa">
                       <Plus className="h-4 w-4" />
                     </Button>
