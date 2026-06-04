@@ -40,7 +40,8 @@ create table if not exists public.students (
   last_meeting_at timestamptz,
   meetings_count integer not null default 0,
   is_active boolean not null default true,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists public.users (
@@ -93,7 +94,22 @@ alter table public.students
   add column if not exists cs_responsible text,
   add column if not exists last_meeting_at timestamptz,
   add column if not exists meetings_count integer not null default 0,
-  add column if not exists is_active boolean not null default true;
+  add column if not exists is_active boolean not null default true,
+  add column if not exists updated_at timestamptz not null default now();
+
+create or replace function public.touch_students_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists students_touch_updated_at on public.students;
+create trigger students_touch_updated_at
+before update on public.students
+for each row
+execute function public.touch_students_updated_at();
 
 alter table public.users
   add column if not exists is_cs boolean not null default false;

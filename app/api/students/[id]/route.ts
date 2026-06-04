@@ -74,7 +74,7 @@ async function listStudents(
   const { data, error } = await supabase
     .from("students")
     .select("*")
-    .order("created_at", {
+    .order("updated_at", {
       ascending: false
     });
 
@@ -89,6 +89,33 @@ async function listStudents(
     data: data ?? [],
     source: "supabase"
   });
+}
+
+async function ensureStudentExists(
+  supabase: SupabaseClient,
+  id: string
+) : Promise<NextResponse | undefined> {
+  const { data, error } = await supabase
+    .from("students")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 400 }
+    );
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { error: "Aluno nao encontrado" },
+      { status: 404 }
+    );
+  }
+
+  return undefined;
 }
 
 export async function PUT(
@@ -124,9 +151,19 @@ export async function PUT(
     );
   }
 
+  const exists = await ensureStudentExists(
+    supabase,
+    id
+  );
+
+  if (exists) return exists;
+
   const { error } = await supabase
     .from("students")
-    .update(payload)
+    .update({
+      ...payload,
+      updated_at: new Date().toISOString()
+    })
     .eq("id", id);
 
   if (error) {
@@ -166,6 +203,13 @@ export async function PATCH(
     );
   }
 
+  const exists = await ensureStudentExists(
+    supabase,
+    id
+  );
+
+  if (exists) return exists;
+
   if (body.action === "register_meeting") {
     const { data: current, error: readError } =
       await supabase
@@ -188,7 +232,8 @@ export async function PATCH(
           new Date().toISOString(),
         meetings_count:
           Number(current?.meetings_count ?? 0) +
-          1
+          1,
+        updated_at: new Date().toISOString()
       })
       .eq("id", id);
 
@@ -206,7 +251,8 @@ export async function PATCH(
     const { error } = await supabase
       .from("students")
       .update({
-        is_active: body.is_active
+        is_active: body.is_active,
+        updated_at: new Date().toISOString()
       })
       .eq("id", id);
 
@@ -248,6 +294,13 @@ export async function DELETE(
       { status: 503 }
     );
   }
+
+  const exists = await ensureStudentExists(
+    supabase,
+    id
+  );
+
+  if (exists) return exists;
 
   const { error } = await supabase
     .from("students")

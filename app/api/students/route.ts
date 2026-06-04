@@ -55,7 +55,8 @@ function normalizePayload(payload: StudentPayload) {
     email: payload.email?.trim() ?? "",
     cs_responsible:
       payload.cs_responsible?.trim() ?? "",
-    is_active: payload.is_active ?? true
+    is_active: payload.is_active ?? true,
+    updated_at: new Date().toISOString()
   };
 }
 
@@ -79,7 +80,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("students")
     .select("*")
-    .order("created_at", {
+    .order("updated_at", {
       ascending: false
     });
 
@@ -125,7 +126,10 @@ export async function POST(request: Request) {
 
   const { error } = await supabase
     .from("students")
-    .insert(payload);
+    .insert({
+      ...payload,
+      updated_at: new Date().toISOString()
+    });
 
   if (error) {
     return NextResponse.json(

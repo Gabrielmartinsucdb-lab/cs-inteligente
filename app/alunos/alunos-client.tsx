@@ -47,6 +47,7 @@ type Student = {
   meetings_count: number | null;
   is_active: boolean | null;
   created_at: string;
+  updated_at?: string | null;
 };
 
 type StudentForm = {
@@ -93,6 +94,10 @@ function normalizeStudent(
       student.is_active ?? true,
     created_at:
       student.created_at ??
+      new Date().toISOString(),
+    updated_at:
+      student.updated_at ??
+      student.created_at ??
       new Date().toISOString()
   };
 }
@@ -126,8 +131,12 @@ function writeLocalStudents(
 function sortStudents(students: Student[]) {
   return [...students].sort(
     (a, b) =>
-      new Date(b.created_at).getTime() -
-      new Date(a.created_at).getTime()
+      new Date(
+        b.updated_at ?? b.created_at
+      ).getTime() -
+      new Date(
+        a.updated_at ?? a.created_at
+      ).getTime()
   );
 }
 
@@ -252,9 +261,9 @@ export function AlunosClient() {
         normalizeStudent
       );
 
-      setItems(students);
+      setItems(sortStudents(students));
       setStoreSource(result.source);
-      writeLocalStudents(students);
+      writeLocalStudents(sortStudents(students));
     } catch {
       const students =
         sortStudents(readLocalStudents());
@@ -307,22 +316,28 @@ export function AlunosClient() {
         normalizeStudent
       );
 
-      setItems(students);
+      setItems(sortStudents(students));
       setStoreSource(result.source);
-      writeLocalStudents(students);
+      writeLocalStudents(sortStudents(students));
     } catch {
       const current = readLocalStudents();
+      const now = new Date().toISOString();
       const next = editingId
         ? current.map((student) =>
             student.id === editingId
               ? {
                   ...student,
-                  ...payload
+                  ...payload,
+                  updated_at: now
                 }
               : student
           )
         : [
-            normalizeStudent(payload),
+            normalizeStudent({
+              ...payload,
+              created_at: now,
+              updated_at: now
+            }),
             ...current
           ];
 
@@ -363,8 +378,8 @@ export function AlunosClient() {
         normalizeStudent
       );
 
-      setItems(students);
-      writeLocalStudents(students);
+      setItems(sortStudents(students));
+      writeLocalStudents(sortStudents(students));
       setStoreSource(result.source);
     } catch {
       const next = readLocalStudents().filter(
@@ -401,8 +416,8 @@ export function AlunosClient() {
         normalizeStudent
       );
 
-      setItems(students);
-      writeLocalStudents(students);
+      setItems(sortStudents(students));
+      writeLocalStudents(sortStudents(students));
       setStoreSource(result.source);
     } catch {
       const now = new Date().toISOString();
@@ -415,7 +430,8 @@ export function AlunosClient() {
                 meetings_count:
                   Number(
                     student.meetings_count ?? 0
-                  ) + 1
+                  ) + 1,
+                updated_at: now
               }
             : student
       );
@@ -456,12 +472,14 @@ export function AlunosClient() {
       writeLocalStudents(students);
       setStoreSource(result.source);
     } catch {
+      const now = new Date().toISOString();
       const next = readLocalStudents().map(
         (student) =>
           student.id === item.id
             ? {
                 ...student,
-                is_active: nextActive
+                is_active: nextActive,
+                updated_at: now
               }
             : student
       );
@@ -565,18 +583,47 @@ export function AlunosClient() {
       }))
       .filter((row) => row.name);
 
+    let apiSucceeded = true;
+
     for (const student of payload) {
-      await requestStudentsApi(
-        "/api/students",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-          body: JSON.stringify(student)
-        }
-      ).catch(() => null);
+      try {
+        await requestStudentsApi(
+          "/api/students",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+            body: JSON.stringify(student)
+          }
+        );
+      } catch {
+        apiSucceeded = false;
+      }
+    }
+
+    if (!apiSucceeded) {
+      const current = readLocalStudents();
+      const imported = payload.map((student) =>
+        normalizeStudent({
+          ...student,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+      );
+      const next = sortStudents([
+        ...imported,
+        ...current
+      ]);
+
+      writeLocalStudents(next);
+      setItems(next);
+      setStoreSource("local");
+      showMessage(
+        "Planilha importada e salva localmente."
+      );
+      return;
     }
 
     await loadItems();
