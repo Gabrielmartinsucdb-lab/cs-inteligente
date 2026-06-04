@@ -23,7 +23,7 @@ export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
   const items = isAdmin ? [...baseItems.slice(0, 3), ...adminItems] : baseItems;
 
   return (
-    <nav className="grid grid-cols-5 border-t bg-white lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-800 bg-slate-950 text-white lg:hidden">
       {items.map((item) => {
         const Icon = item.icon;
         const active = pathname === item.href;
@@ -33,8 +33,8 @@ export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex h-14 flex-col items-center justify-center gap-1 text-[11px] text-slate-500",
-              active && "text-slate-950"
+              "flex h-16 flex-col items-center justify-center gap-1 text-[11px] text-slate-400",
+              active && "text-white"
             )}
           >
             <Icon className="h-4 w-4" />

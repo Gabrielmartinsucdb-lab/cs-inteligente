@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f4f5f7;
+  --foreground: #111111;
   --card: #ffffff;
-  --card-foreground: #0f172a;
-  --primary: #0f172a;
+  --card-foreground: #111111;
+  --primary: #111111;
   --primary-foreground: #ffffff;
-  --muted: #eef2f7;
-  --muted-foreground: #64748b;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #2563eb;
+  --muted: #f1f3f5;
+  --muted-foreground: #667085;
+  --border: #e5e7eb;
+  --input: #d8dde5;
+  --ring: #111827;
 }
 
 * {
@@ -24,6 +24,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  text-rendering: geometricPrecision;
 }
 
 button,
@@ -36,4 +37,9 @@ select {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+::selection {
+  background: #111111;
+  color: #ffffff;
 }

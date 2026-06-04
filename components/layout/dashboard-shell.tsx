@@ -12,13 +12,13 @@ export async function DashboardShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-[#f4f5f7]">
       <Sidebar isAdmin />
 
       <div className="flex min-h-screen flex-1 flex-col">
         <Topbar />
 
-        <main className="flex-1 p-4 pb-20 lg:p-8">
+        <main className="flex-1 p-4 pb-24 lg:p-8">
           {children}
         </main>
 

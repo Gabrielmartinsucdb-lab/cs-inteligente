@@ -24,9 +24,9 @@ export function Topbar() {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-white px-4 lg:px-8">
+    <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:px-8">
       <div>
-        <p className="text-sm font-semibold text-slate-950">
+        <p className="text-base font-semibold text-slate-950">
           Painel operacional
         </p>
 

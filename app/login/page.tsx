@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LockKeyhole, LogIn, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -104,21 +105,62 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>
-            Entrar no CS
-            Inteligente
-          </CardTitle>
-        </CardHeader>
+    <main className="min-h-screen bg-slate-950 text-white">
+      <div className="grid min-h-screen lg:grid-cols-[1fr_440px]">
+        <section className="flex items-center px-6 py-12 lg:px-16">
+          <div className="max-w-2xl">
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-sm text-slate-300">
+              <ShieldCheck className="h-4 w-4" />
+              Operações internas
+            </div>
 
-        <CardContent>
+            <h1 className="text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
+              CS Inteligente
+            </h1>
+
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-300">
+              Acesse o painel para acompanhar alunos,
+              mentorias, aulas, templates e indicadores
+              do time de CS em um só lugar.
+            </p>
+
+            <div className="mt-10 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                Dashboard
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                Alunos
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                Aulas
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="flex items-center justify-center bg-white px-4 py-10 text-slate-950 lg:px-8">
+          <Card className="w-full max-w-md border-slate-200 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+            <CardHeader className="space-y-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-md bg-slate-950 text-white">
+                <LockKeyhole className="h-5 w-5" />
+              </div>
+
+              <div>
+                <CardTitle className="text-xl">
+                  Entrar no painel
+                </CardTitle>
+                <p className="mt-1 text-sm text-slate-500">
+                  Informe suas credenciais para continuar.
+                </p>
+              </div>
+            </CardHeader>
+
+            <CardContent>
           <form
             onSubmit={
               handleLogin
             }
-            className="space-y-4"
+            className="space-y-5"
           >
             <div className="space-y-2">
               <Label>
@@ -160,7 +202,7 @@ export default function LoginPage() {
             </div>
 
             {error ? (
-              <p className="text-sm text-red-600">
+              <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {error}
               </p>
             ) : null}
@@ -169,13 +211,16 @@ export default function LoginPage() {
               className="w-full"
               disabled={loading}
             >
+              <LogIn className="h-4 w-4" />
               {loading
                 ? "Entrando..."
                 : "Entrar"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
     </main>
   );
 }
