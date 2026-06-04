@@ -19,7 +19,9 @@ export async function DashboardShell({
         <Topbar />
 
         <main className="flex-1 p-4 pb-24 lg:p-8">
-          {children}
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
+            {children}
+          </div>
         </main>
 
         <MobileNav isAdmin />

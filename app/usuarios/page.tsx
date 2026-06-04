@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { LOCAL_ADMIN } from "@/lib/admin-auth";
 import { canAccessUsers, parseLocalSession } from "@/lib/local-session";
 import { createClient } from "@/lib/supabase-server";
@@ -22,10 +23,11 @@ export default async function UsuariosPage() {
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Usuários</h1>
-          <p className="text-sm text-slate-500">Criação de acessos operacionais.</p>
-        </div>
+        <PageHeader
+          eyebrow="Acessos"
+          title="Usuários"
+          description="Criação e controle dos acessos operacionais, com permissões para CS, templates e administração."
+        />
         <UsuariosClient />
       </div>
     </DashboardShell>

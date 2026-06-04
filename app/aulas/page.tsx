@@ -1,14 +1,16 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { AulasClient } from "./aulas-client";
 
 export default function AulasPage() {
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Aulas</h1>
-          <p className="text-sm text-slate-500">Base rápida de aulas para atendimento.</p>
-        </div>
+        <PageHeader
+          eyebrow="Biblioteca de apoio"
+          title="Aulas"
+          description="Cadastre, encontre e compartilhe aulas por mentoria com uma visualização mais organizada para o time."
+        />
         <AulasClient />
       </div>
     </DashboardShell>

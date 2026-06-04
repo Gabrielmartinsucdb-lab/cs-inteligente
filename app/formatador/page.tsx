@@ -1,14 +1,16 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { FormatadorClient } from "./formatador-client";
 
 export default function FormatadorPage() {
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Formatador</h1>
-          <p className="text-sm text-slate-500">Transforme eventos do Google Calendar em mensagens prontas.</p>
-        </div>
+        <PageHeader
+          eyebrow="Comunicação"
+          title="Formatador"
+          description="Converta dados recebidos em mensagens prontas com leitura mais limpa e foco no conteúdo."
+        />
         <FormatadorClient />
       </div>
     </DashboardShell>

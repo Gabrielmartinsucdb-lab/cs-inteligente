@@ -1,14 +1,16 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { GptsClient } from "./gpts-client";
 
 export default function GptsPage() {
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">GPTs</h1>
-          <p className="text-sm text-slate-500">Catálogo interno de GPTs úteis.</p>
-        </div>
+        <PageHeader
+          eyebrow="Ferramentas"
+          title="GPTs"
+          description="Catálogo interno com os modelos e links úteis para o trabalho do time."
+        />
         <GptsClient />
       </div>
     </DashboardShell>

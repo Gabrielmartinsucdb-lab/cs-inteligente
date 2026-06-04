@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { LOCAL_ADMIN } from "@/lib/admin-auth";
 import { canAccessTemplates, parseLocalSession } from "@/lib/local-session";
 import { createClient } from "@/lib/supabase-server";
@@ -26,10 +27,11 @@ export default async function TemplatesPage() {
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Templates</h1>
-          <p className="text-sm text-slate-500">Mensagens com variáveis para o formatador.</p>
-        </div>
+        <PageHeader
+          eyebrow="Biblioteca interna"
+          title="Templates"
+          description="Mensagens com variáveis para o formatador, mantidas em uma visão mais limpa e centralizada."
+        />
         <TemplatesClient
           canManageTemplates={canManageTemplates}
           canDeleteTemplates={

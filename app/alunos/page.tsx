@@ -1,14 +1,16 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { AlunosClient } from "./alunos-client";
 
 export default function AlunosPage() {
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Alunos</h1>
-          <p className="text-sm text-slate-500">Cadastro e planilhas da base operacional.</p>
-        </div>
+        <PageHeader
+          eyebrow="Base operacional"
+          title="Alunos"
+          description="Cadastre, acompanhe e filtre a base com foco em mentoria, CS responsável e histórico de acompanhamento."
+        />
         <AlunosClient />
       </div>
     </DashboardShell>
