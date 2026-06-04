@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Bot, GraduationCap, LayoutDashboard, MessageSquareText, UserPlus, Users } from "lucide-react";
+import { BookOpen, Bot, GraduationCap, KanbanSquare, LayoutDashboard, MessageSquareText, UserPlus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const baseItems = [
@@ -10,6 +10,7 @@ const baseItems = [
   { href: "/formatador", label: "Formatador", icon: MessageSquareText },
   { href: "/aulas", label: "Aulas", icon: BookOpen },
   { href: "/gpts", label: "GPTs", icon: Bot },
+  { href: "/kanban", label: "Kanban", icon: KanbanSquare },
   { href: "/alunos", label: "Alunos", icon: Users }
 ];
 
@@ -20,10 +21,10 @@ const adminItems = [
 
 export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
-  const items = isAdmin ? [...baseItems.slice(0, 3), ...adminItems] : baseItems;
+  const items = isAdmin ? [...baseItems.slice(0, 4), ...adminItems] : baseItems;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-800 bg-slate-950/95 text-white shadow-[0_-18px_35px_rgba(15,23,42,0.28)] backdrop-blur lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-800 bg-slate-950/95 text-white shadow-[0_-18px_35px_rgba(15,23,42,0.28)] backdrop-blur lg:hidden">
       {items.map((item) => {
         const Icon = item.icon;
         const active = pathname === item.href;

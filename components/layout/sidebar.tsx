@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Bot, GraduationCap, LayoutDashboard, MessageSquareText, UserPlus, Users } from "lucide-react";
+import { BookOpen, Bot, GraduationCap, KanbanSquare, LayoutDashboard, MessageSquareText, UserPlus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const baseItems = [
@@ -10,6 +10,7 @@ const baseItems = [
   { href: "/formatador", label: "Formatador", icon: MessageSquareText },
   { href: "/aulas", label: "Aulas", icon: BookOpen },
   { href: "/gpts", label: "GPTs", icon: Bot },
+  { href: "/kanban", label: "Kanban", icon: KanbanSquare },
   { href: "/alunos", label: "Alunos", icon: Users }
 ];
 
