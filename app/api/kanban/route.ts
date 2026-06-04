@@ -33,10 +33,23 @@ async function getActor() {
 
   return {
     allowed: localAdmin || Boolean(session),
+    isAdmin: localAdmin || Boolean(session?.is_admin),
     id: session?.id ?? null,
     name:
       (localAdmin ? "Gabriel Martins" : session?.name?.trim() || session?.login?.trim()) ||
       "Usuário"
+  };
+}
+
+function getActorUser(actor: Awaited<ReturnType<typeof getActor>>) {
+  if (!actor.isAdmin) return null;
+
+  return {
+    id: actor.id ?? "local-admin",
+    name: actor.name,
+    is_admin: true,
+    is_cs: false,
+    created_at: new Date().toISOString()
   };
 }
 
@@ -168,6 +181,12 @@ export async function GET() {
 
   try {
     const data = await loadBoard(supabase);
+    const actorUser = getActorUser(actor);
+
+    if (actorUser && !data.users.some((user) => user.id === actorUser.id)) {
+      data.users = [actorUser, ...data.users];
+    }
+
     return NextResponse.json({ data, source: "supabase" });
   } catch (error) {
     return NextResponse.json(

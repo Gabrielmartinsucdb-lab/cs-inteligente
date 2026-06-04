@@ -64,21 +64,40 @@ function getCookieValue(name: string) {
 function getCurrentActor() {
   try {
     const raw = getCookieValue("cs_user_session");
-    if (!raw) return { id: null, name: "Usuário" };
+    if (!raw) return { id: null, name: "Usuário", isAdmin: false };
 
     const parsed = JSON.parse(raw) as {
       name?: string;
       login?: string;
       id?: string;
+      is_admin?: boolean;
     };
 
     return {
       id: parsed.id ?? null,
-      name: parsed.name?.trim() || parsed.login?.trim() || "Usuário"
+      name: parsed.name?.trim() || parsed.login?.trim() || "Usuário",
+      isAdmin: Boolean(parsed.is_admin)
     };
   } catch {
-    return { id: null, name: "Usuário" };
+    return { id: null, name: "Usuário", isAdmin: false };
   }
+}
+
+function getLocalAdminActor() {
+  if (!isBrowser()) return null;
+
+  const localAdminCookie = getCookieValue("cs_local_admin") === "true";
+  const actor = getCurrentActor();
+
+  if (!localAdminCookie && !actor.isAdmin) return null;
+
+  return {
+    id: actor.id ?? "local-admin",
+    name: actor.name,
+    is_admin: true,
+    is_cs: false,
+    created_at: new Date().toISOString()
+  };
 }
 
 function baseColumns(): KanbanColumn[] {
@@ -197,15 +216,23 @@ async function requestBoard(
 async function readUsers(): Promise<KanbanUser[]> {
   try {
     const users = (await listUsers()) as User[];
-    return users.map((user) => ({
+    const mapped = users.map((user) => ({
       id: user.id,
       name: user.name,
       is_admin: Boolean(user.is_admin),
       is_cs: Boolean(user.is_cs),
       created_at: user.created_at
     }));
+
+    const actor = getLocalAdminActor();
+    if (actor && !mapped.some((user) => user.id === actor.id)) {
+      return [actor, ...mapped];
+    }
+
+    return mapped;
   } catch {
-    return [];
+    const actor = getLocalAdminActor();
+    return actor ? [actor] : [];
   }
 }
 
