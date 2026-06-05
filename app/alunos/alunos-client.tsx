@@ -617,9 +617,11 @@ export function AlunosClient() {
     try {
       await importStudentsFromFile(importFile);
       closeImportModal();
-    } catch {
+    } catch (error) {
       setImportMessage(
-        "Não consegui importar essa planilha."
+        error instanceof Error
+          ? error.message
+          : "Não consegui importar essa planilha."
       );
     } finally {
       setImportBusy(false);
