@@ -374,6 +374,19 @@ function studentPayload(form: StudentForm) {
   };
 }
 
+function isMeetingOverdue(
+  lastMeetingAt?: string | null
+) {
+  if (!lastMeetingAt) return true;
+
+  const last = new Date(lastMeetingAt).getTime();
+  const now = Date.now();
+  const daysWithoutMeeting =
+    (now - last) / (1000 * 60 * 60 * 24);
+
+  return daysWithoutMeeting > 30;
+}
+
 export function AlunosClient() {
   const fileRef =
     useRef<HTMLInputElement>(null);
@@ -395,6 +408,8 @@ export function AlunosClient() {
     useState("Todos");
   const [searchQuery, setSearchQuery] =
     useState("");
+  const [showInactive, setShowInactive] =
+    useState(false);
   const [users, setUsers] =
     useState<User[]>([]);
   const [importModalOpen, setImportModalOpen] =
@@ -440,6 +455,8 @@ export function AlunosClient() {
           selectedMentorship;
 
       if (!mentorshipMatch) return false;
+      if (!showInactive && !(item.is_active ?? true))
+        return false;
       if (!normalizedQuery) return true;
 
       const haystack = normalizeImportText(
@@ -456,7 +473,7 @@ export function AlunosClient() {
 
       return haystack.includes(normalizedQuery);
     });
-  }, [items, searchQuery, selectedMentorship]);
+  }, [items, searchQuery, selectedMentorship, showInactive]);
 
   const importUsedCount = useMemo(
     () =>
@@ -1149,6 +1166,18 @@ export function AlunosClient() {
           />
         </div>
 
+        <label className="flex items-center gap-3 rounded-md border bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={showInactive}
+            onChange={(event) =>
+              setShowInactive(event.target.checked)
+            }
+          />
+          Mostrar alunos não ativos
+        </label>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
@@ -1231,14 +1260,21 @@ export function AlunosClient() {
               {filteredItems.map((item) => {
                 const isActive =
                   item.is_active ?? true;
+                const isOverdue =
+                  isActive &&
+                  isMeetingOverdue(
+                    item.last_meeting_at
+                  );
 
                 return (
                   <tr
                     key={item.id}
                     className={
-                      isActive
-                        ? "border-t"
-                        : "border-t bg-red-50/50"
+                      !isActive
+                        ? "border-t bg-slate-50/70 opacity-70"
+                        : isOverdue
+                          ? "border-t bg-red-50"
+                          : "border-t"
                     }
                   >
                     <td className="p-3">
@@ -1277,6 +1313,11 @@ export function AlunosClient() {
                             ? "Última reunião registrada"
                             : "Sem reunião registrada"}
                         </p>
+                        {isOverdue ? (
+                          <p className="text-xs font-medium text-red-700">
+                            Mais de 30 dias sem reunião
+                          </p>
+                        ) : null}
                       </div>
                     </td>
 
@@ -1287,14 +1328,18 @@ export function AlunosClient() {
                     <td className="p-3">
                       <span
                         className={
-                          isActive
-                            ? "rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700"
-                            : "rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700"
+                          !isActive
+                            ? "rounded-full bg-slate-200 px-2 py-1 text-xs font-medium text-slate-700"
+                            : isOverdue
+                              ? "rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700"
+                              : "rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700"
                         }
                       >
-                        {isActive
-                          ? "Ativo"
-                          : "NAO RESPONDE O CS"}
+                        {!isActive
+                          ? "Não ativo"
+                          : isOverdue
+                            ? "Ativo com alerta"
+                            : "Ativo"}
                       </span>
                     </td>
 
