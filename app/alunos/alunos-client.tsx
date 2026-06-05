@@ -393,6 +393,8 @@ export function AlunosClient() {
     useState(true);
   const [selectedMentorship, setSelectedMentorship] =
     useState("Todos");
+  const [searchQuery, setSearchQuery] =
+    useState("");
   const [users, setUsers] =
     useState<User[]>([]);
   const [importModalOpen, setImportModalOpen] =
@@ -427,15 +429,34 @@ export function AlunosClient() {
   }, [form.cs_responsible, users]);
 
   const filteredItems = useMemo(() => {
-    if (selectedMentorship === "Todos")
-      return items;
-
-    return items.filter(
-      (item) =>
-        (item.mentorship ?? "") ===
-        selectedMentorship
+    const normalizedQuery = normalizeImportText(
+      searchQuery
     );
-  }, [items, selectedMentorship]);
+
+    return items.filter((item) => {
+      const mentorshipMatch =
+        selectedMentorship === "Todos" ||
+        (item.mentorship ?? "") ===
+          selectedMentorship;
+
+      if (!mentorshipMatch) return false;
+      if (!normalizedQuery) return true;
+
+      const haystack = normalizeImportText(
+        [
+          item.name,
+          item.mentorship ?? "",
+          item.phone ?? "",
+          item.email ?? "",
+          item.cs_responsible ?? ""
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [items, searchQuery, selectedMentorship]);
 
   const importUsedCount = useMemo(
     () =>
@@ -451,6 +472,12 @@ export function AlunosClient() {
       () => setMessage(""),
       2600
     );
+  }
+
+  function meetingCountLabel(count: number) {
+    return count === 1
+      ? "1 reunião"
+      : `${count} reuniões`;
   }
 
   function closeImportModal() {
@@ -794,9 +821,12 @@ export function AlunosClient() {
       const students = result.data.map(
         normalizeStudent
       );
+      const sortedStudents = sortStudents(
+        students
+      );
 
-      setItems(sortStudents(students));
-      writeLocalStudents(sortStudents(students));
+      setItems(sortedStudents);
+      writeLocalStudents(sortedStudents);
       setStoreSource(result.source);
     } catch {
       const now = new Date().toISOString();
@@ -815,13 +845,17 @@ export function AlunosClient() {
             : student
       );
 
-      setItems(sortStudents(next));
-      writeLocalStudents(next);
+      const sortedNext = sortStudents(next);
+
+      setItems(sortedNext);
+      writeLocalStudents(sortedNext);
       setStoreSource("local");
     }
 
     showMessage(
-      "Reunião registrada com a data de hoje."
+      `Reunião registrada. Agora este aluno tem ${meetingCountLabel(
+        Number(item.meetings_count ?? 0) + 1
+      )}.`
     );
   }
 
@@ -1112,6 +1146,17 @@ export function AlunosClient() {
           )}
         </div>
 
+        <div className="space-y-2">
+          <Label>Buscar aluno</Label>
+          <Input
+            value={searchQuery}
+            onChange={(event) =>
+              setSearchQuery(event.target.value)
+            }
+            placeholder="Nome, telefone, e-mail ou CS"
+          />
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
@@ -1229,13 +1274,28 @@ export function AlunosClient() {
                     </td>
 
                     <td className="p-3">
-                      {formatDate(
-                        item.last_meeting_at
-                      )}
+                      <div className="space-y-1">
+                        <p className="font-medium text-slate-950">
+                          {formatDate(
+                            item.last_meeting_at
+                          )}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {item.last_meeting_at
+                            ? "Última reunião registrada"
+                            : "Sem reunião registrada"}
+                        </p>
+                      </div>
                     </td>
 
                     <td className="p-3">
-                      {item.meetings_count ?? 0}
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                        {meetingCountLabel(
+                          Number(
+                            item.meetings_count ?? 0
+                          )
+                        )}
+                      </span>
                     </td>
 
                     <td className="p-3">
