@@ -159,9 +159,31 @@ async function requestStudentsApi(
   const response = await fetch(input, init);
 
   if (!response.ok) {
-    throw new Error(
-      `Students API ${response.status}`
-    );
+    let message = `Students API ${response.status}`;
+
+    try {
+      const text = await response.text();
+
+      if (text.trim()) {
+        try {
+          const payload = JSON.parse(text) as {
+            error?: string;
+          };
+
+          if (payload?.error) {
+            message = payload.error;
+          } else {
+            message = text.trim();
+          }
+        } catch {
+          message = text.trim();
+        }
+      }
+    } catch {
+      // keep default message
+    }
+
+    throw new Error(message);
   }
 
   return (await response.json()) as StudentApiResult;
