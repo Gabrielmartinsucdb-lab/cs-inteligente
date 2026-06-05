@@ -44,6 +44,12 @@ create table if not exists public.students (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.student_meetings (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references public.students(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -97,6 +103,10 @@ alter table public.students
   add column if not exists is_active boolean not null default true,
   add column if not exists updated_at timestamptz not null default now();
 
+alter table public.student_meetings
+  add column if not exists student_id uuid not null references public.students(id) on delete cascade,
+  add column if not exists created_at timestamptz not null default now();
+
 create or replace function public.touch_students_updated_at()
 returns trigger as $$
 begin
@@ -110,6 +120,8 @@ create trigger students_touch_updated_at
 before update on public.students
 for each row
 execute function public.touch_students_updated_at();
+
+alter table public.student_meetings enable row level security;
 
 alter table public.users
   add column if not exists is_cs boolean not null default false;
@@ -183,6 +195,13 @@ create policy "authenticated update students"
   on public.students for update to authenticated using (true) with check (true);
 create policy "authenticated delete students"
   on public.students for delete to authenticated using (true);
+
+create policy "authenticated read student_meetings"
+  on public.student_meetings for select to authenticated using (true);
+create policy "authenticated insert student_meetings"
+  on public.student_meetings for insert to authenticated with check (true);
+create policy "authenticated delete student_meetings"
+  on public.student_meetings for delete to authenticated using (true);
 
 create policy "authenticated read kanban_columns"
   on public.kanban_columns for select to authenticated using (true);

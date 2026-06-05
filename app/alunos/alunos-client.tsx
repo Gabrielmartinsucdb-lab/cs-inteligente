@@ -11,6 +11,7 @@ import {
   FileSpreadsheet,
   Download,
   Pencil,
+  Undo2,
   Trash2,
   UserCheck,
   UserX,
@@ -874,6 +875,88 @@ export function AlunosClient() {
     );
   }
 
+  async function undoMeeting(item: Student) {
+    const now = new Date().toISOString();
+    const next = readLocalStudents().length
+      ? readLocalStudents().map((student) =>
+          student.id === item.id
+            ? {
+                ...student,
+                last_meeting_at:
+                  Math.max(
+                    0,
+                    Number(
+                      student.meetings_count ?? 0
+                    ) - 1
+                  ) <= 0
+                    ? null
+                    : student.last_meeting_at,
+                meetings_count: Math.max(
+                  0,
+                  Number(
+                    student.meetings_count ?? 0
+                  ) - 1
+                ),
+                updated_at: now
+              }
+            : student
+        )
+      : items.map((student) =>
+          student.id === item.id
+            ? {
+                ...student,
+                last_meeting_at: null,
+                meetings_count: Math.max(
+                  0,
+                  Number(
+                    student.meetings_count ?? 0
+                  ) - 1
+                ),
+                updated_at: now
+              }
+            : student
+        );
+
+    const sortedNext = sortStudents(next);
+
+    setItems(sortedNext);
+    writeLocalStudents(sortedNext);
+
+    try {
+      const result =
+        await requestStudentsApi(
+          `/api/students/${item.id}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+            body: JSON.stringify({
+              action: "undo_meeting"
+            })
+          }
+        );
+      const students = result.data.map(
+        normalizeStudent
+      );
+
+      const sortedStudents = sortStudents(
+        students
+      );
+
+      setItems(sortedStudents);
+      writeLocalStudents(sortedStudents);
+      setStoreSource(result.source);
+      showMessage("Última reunião removida.");
+      return;
+    } catch {
+      setStoreSource("local");
+    }
+
+    showMessage("Última reunião removida.");
+  }
+
   async function toggleActive(item: Student) {
     const nextActive = !(item.is_active ?? true);
 
@@ -1360,6 +1443,22 @@ export function AlunosClient() {
                           aria-label="Registrar reunião"
                         >
                           <CalendarCheck className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            undoMeeting(item)
+                          }
+                          disabled={
+                            Number(
+                              item.meetings_count ?? 0
+                            ) === 0
+                          }
+                          aria-label="Desfazer última reunião"
+                        >
+                          <Undo2 className="h-4 w-4" />
                         </Button>
 
                         <Button

@@ -15,6 +15,11 @@ type StudentPayload = {
   is_active?: boolean;
 };
 
+type StudentMeetingRow = {
+  id: string;
+  created_at: string;
+};
+
 function getSupabaseAdmin() {
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -118,6 +123,50 @@ async function ensureStudentExists(
   return undefined;
 }
 
+async function recalculateMeetingSummary(
+  supabase: SupabaseClient,
+  id: string
+) {
+  const { data, error } = await supabase
+    .from("student_meetings")
+    .select("id, created_at")
+    .eq("student_id", id)
+    .order("created_at", {
+      ascending: false
+    });
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 400 }
+    );
+  }
+
+  const meetings =
+    (data ?? []) as StudentMeetingRow[];
+  const lastMeetingAt =
+    meetings[0]?.created_at ?? null;
+  const meetingsCount = meetings.length;
+
+  const { error: updateError } = await supabase
+    .from("students")
+    .update({
+      last_meeting_at: lastMeetingAt,
+      meetings_count: meetingsCount,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", id);
+
+  if (updateError) {
+    return NextResponse.json(
+      { error: updateError.message },
+      { status: 400 }
+    );
+  }
+
+  return null;
+}
+
 export async function PUT(
   request: Request,
   context: {
@@ -211,12 +260,44 @@ export async function PATCH(
   if (exists) return exists;
 
   if (body.action === "register_meeting") {
-    const { data: current, error: readError } =
+    const { error: insertError } =
       await supabase
-        .from("students")
-        .select("meetings_count")
-        .eq("id", id)
-        .single();
+        .from("student_meetings")
+        .insert({
+          student_id: id
+        });
+
+    if (insertError) {
+      return NextResponse.json(
+        { error: insertError.message },
+        { status: 400 }
+      );
+    }
+
+    const recalculationError =
+      await recalculateMeetingSummary(
+        supabase,
+        id
+      );
+
+    if (recalculationError) {
+      return recalculationError;
+    }
+
+    return listStudents(supabase);
+  }
+
+  if (body.action === "undo_meeting") {
+    const { data: meeting, error: readError } =
+      await supabase
+        .from("student_meetings")
+        .select("id")
+        .eq("student_id", id)
+        .order("created_at", {
+          ascending: false
+        })
+        .limit(1)
+        .maybeSingle();
 
     if (readError) {
       return NextResponse.json(
@@ -225,23 +306,74 @@ export async function PATCH(
       );
     }
 
-    const { error } = await supabase
-      .from("students")
-      .update({
-        last_meeting_at:
-          new Date().toISOString(),
-        meetings_count:
-          Number(current?.meetings_count ?? 0) +
-          1,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", id);
+    if (!meeting) {
+      const { data: currentStudent, error: currentError } =
+        await supabase
+          .from("students")
+          .select("meetings_count, last_meeting_at")
+          .eq("id", id)
+          .maybeSingle();
 
-    if (error) {
+      if (currentError) {
+        return NextResponse.json(
+          { error: currentError.message },
+          { status: 400 }
+        );
+      }
+
+      const currentCount = Number(
+        currentStudent?.meetings_count ?? 0
+      );
+
+      if (currentCount <= 0) {
+        return NextResponse.json(
+          { error: "Nenhuma reuniao para desfazer" },
+          { status: 400 }
+        );
+      }
+
+      const { error: updateError } = await supabase
+        .from("students")
+        .update({
+          meetings_count: currentCount - 1,
+          last_meeting_at:
+            currentCount - 1 <= 0
+              ? null
+              : currentStudent?.last_meeting_at ?? null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+      if (updateError) {
+        return NextResponse.json(
+          { error: updateError.message },
+          { status: 400 }
+        );
+      }
+
+      return listStudents(supabase);
+    }
+
+    const { error: deleteError } = await supabase
+      .from("student_meetings")
+      .delete()
+      .eq("id", meeting.id);
+
+    if (deleteError) {
       return NextResponse.json(
-        { error: error.message },
+        { error: deleteError.message },
         { status: 400 }
       );
+    }
+
+    const recalculationError =
+      await recalculateMeetingSummary(
+        supabase,
+        id
+      );
+
+    if (recalculationError) {
+      return recalculationError;
     }
 
     return listStudents(supabase);
