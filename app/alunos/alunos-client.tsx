@@ -814,6 +814,32 @@ export function AlunosClient() {
   async function registerMeeting(
     item: Student
   ) {
+    const now = new Date().toISOString();
+    const applyMeetingUpdate = (
+      student: Student
+    ) =>
+      student.id === item.id
+        ? {
+            ...student,
+            last_meeting_at: now,
+            meetings_count:
+              Number(student.meetings_count ?? 0) +
+              1,
+            updated_at: now
+          }
+        : student;
+
+    const optimisticNext = sortStudents(
+      readLocalStudents().length
+        ? readLocalStudents().map(
+            applyMeetingUpdate
+          )
+        : items.map(applyMeetingUpdate)
+    );
+
+    setItems(optimisticNext);
+    writeLocalStudents(optimisticNext);
+
     try {
       const result =
         await requestStudentsApi(
@@ -840,26 +866,6 @@ export function AlunosClient() {
       writeLocalStudents(sortedStudents);
       setStoreSource(result.source);
     } catch {
-      const now = new Date().toISOString();
-      const next = readLocalStudents().map(
-        (student) =>
-          student.id === item.id
-            ? {
-                ...student,
-                last_meeting_at: now,
-                meetings_count:
-                  Number(
-                    student.meetings_count ?? 0
-                  ) + 1,
-                updated_at: now
-              }
-            : student
-      );
-
-      const sortedNext = sortStudents(next);
-
-      setItems(sortedNext);
-      writeLocalStudents(sortedNext);
       setStoreSource("local");
     }
 
