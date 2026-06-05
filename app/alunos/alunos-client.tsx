@@ -474,12 +474,6 @@ export function AlunosClient() {
     );
   }
 
-  function meetingCountLabel(count: number) {
-    return count === 1
-      ? "1 reunião"
-      : `${count} reuniões`;
-  }
-
   function closeImportModal() {
     setImportModalOpen(false);
     setImportBusy(false);
@@ -853,9 +847,7 @@ export function AlunosClient() {
     }
 
     showMessage(
-      `Reunião registrada. Agora este aluno tem ${meetingCountLabel(
-        Number(item.meetings_count ?? 0) + 1
-      )}.`
+      "Reunião registrada com a data de hoje."
     );
   }
 
@@ -1289,13 +1281,7 @@ export function AlunosClient() {
                     </td>
 
                     <td className="p-3">
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                        {meetingCountLabel(
-                          Number(
-                            item.meetings_count ?? 0
-                          )
-                        )}
-                      </span>
+                      {item.meetings_count ?? 0}
                     </td>
 
                     <td className="p-3">
